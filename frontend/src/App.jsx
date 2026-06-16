@@ -190,7 +190,7 @@ export default function App() {
   useEffect(() => {
     const checkUpdate = async () => {
       try {
-        const res = await fetch('https://api.github.com/repos/angusdevgo/Lumin-SSH/releases/latest');
+        const res = await fetch('https://api.github.com/repos/wmwlwmwl/Lumin-SSH/releases/latest');
         if (!res.ok) return;
         const data = await res.json();
         if (data && data.tag_name) {

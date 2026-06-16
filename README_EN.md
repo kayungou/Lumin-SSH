@@ -6,8 +6,8 @@
 
 Built with Go (Wails) + React 18. Focused on blazing speed, glassmorphism design, and seamless cloud sync.
 
-[![Release](https://img.shields.io/github/v/release/angusdevgo/Lumin-SSH?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/angusdevgo/Lumin-SSH/releases)
-[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS-0078D6.svg?style=flat-square)](https://github.com/angusdevgo/Lumin-SSH/releases)
+[![Release](https://img.shields.io/github/v/release/wmwlwmwl/Lumin-SSH?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/wmwlwmwl/Lumin-SSH/releases)
+[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS-0078D6.svg?style=flat-square)](https://github.com/wmwlwmwl/Lumin-SSH/releases)
 [![License](https://img.shields.io/badge/LICENSE-MIT-8CBA00.svg?style=flat-square)](LICENSE)
 
 [English](./README_EN.md) · [简体中文](./README.md)
@@ -69,7 +69,7 @@ Requirements: **Go 1.20+** and **Node.js 18+**
 go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
 # Clone
-git clone https://github.com/angusdevgo/Lumin-SSH.git
+git clone https://github.com/wmwlwmwl/Lumin-SSH.git
 cd Lumin-SSH
 
 # Dev mode (hot reload)
