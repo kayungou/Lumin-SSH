@@ -184,7 +184,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
   const handleCheckUpdate = async () => {
     setCheckingUpdate(true);
     try {
-      const res = await fetch('https://api.github.com/repos/angusdevgo/Lumin-SSH/releases/latest');
+      const res = await fetch('https://api.github.com/repos/wmwlwmwl/Lumin-SSH/releases/latest');
       if (!res.ok) throw new Error('API request failed');
       const data = await res.json();
       if (data && data.tag_name) {
@@ -1005,7 +1005,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                 {/* 列表项 */}
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
                   <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/angusdevgo/Lumin-SSH/issues/new')}
+                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH/issues/new')}
                     className="about-list-item"
                     style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--bg-2)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-3)'}
@@ -1019,7 +1019,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   </div>
 
                   <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/angusdevgo/Lumin-SSH/discussions')}
+                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH/discussions')}
                     className="about-list-item"
                     style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--bg-2)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-3)'}
@@ -1033,7 +1033,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   </div>
 
                   <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/angusdevgo/Lumin-SSH')}
+                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH')}
                     className="about-list-item"
                     style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--bg-2)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-3)'}
@@ -1047,7 +1047,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   </div>
 
                   <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/angusdevgo/Lumin-SSH/releases')}
+                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH/releases')}
                     className="about-list-item"
                     style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--bg-2)' }}
                     onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-3)'}
