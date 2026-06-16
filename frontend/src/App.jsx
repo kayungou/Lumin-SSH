@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { EventsOn, WindowMinimise, WindowToggleMaximise, WindowHide, Quit } from '../wailsjs/runtime/runtime.js';
+import { EventsOn, WindowMinimise, WindowToggleMaximise, WindowHide } from '../wailsjs/runtime/runtime.js';
 import * as AppGo from '../wailsjs/go/main/App.js';
 import ServerList from './components/ServerList.jsx';
 import AddServerModal from './components/AddServerModal.jsx';
@@ -736,6 +736,28 @@ export default function App() {
     };
   }, [addToast]);
 
+  // ── 监听关闭窗口请求，弹出选择对话框 ──────────────────────────
+  useEffect(() => {
+    const unbind = EventsOn('close-request', async () => {
+      const choice = await window.luminDialog?.choice?.(
+        '请选择操作',
+        '关闭窗口',
+        [
+          { label: '退出', value: 'quit', primary: true },
+          { label: '系统托盘', value: 'tray', secondary: true },
+          { label: '取消', value: 'cancel', secondary: true },
+        ]
+      );
+      if (choice === 'quit') {
+        AppGo.DoQuit();
+      } else if (choice === 'tray') {
+        WindowHide();
+      }
+      // 'cancel' 或 null（点遮罩关闭）→ 不做任何操作
+    });
+    return () => { if (unbind) unbind(); };
+  }, []);
+
   // ── 监听终端触发的重连请求 ──────────────────────────────────
   useEffect(() => {
     const handleReconnectTrigger = (e) => {
@@ -1100,10 +1122,19 @@ export default function App() {
             <button className="btn btn-ghost btn-icon no-drag" onClick={WindowToggleMaximise} title="最大化" style={{ display: 'flex', alignItems: 'center' }}><Square size={14} /></button>
             <button
               className="btn btn-ghost btn-icon no-drag"
-              title="最小化到托盘"
-              onClick={() => {
-                WindowHide();
-                setShowTrayPanel(false);
+              title="关闭"
+              onClick={async () => {
+                const choice = await window.luminDialog?.choice?.(
+                  '请选择操作',
+                  '关闭窗口',
+                  [
+                    { label: '退出', value: 'quit', primary: true },
+                    { label: '系统托盘', value: 'tray', secondary: true },
+                    { label: '取消', value: 'cancel', secondary: true },
+                  ]
+                );
+                if (choice === 'quit') AppGo.DoQuit();
+                else if (choice === 'tray') { WindowHide(); setShowTrayPanel(false); }
               }}
             ><X size={14} /></button>
           </div>
@@ -1788,7 +1819,7 @@ export default function App() {
               }}
               onMouseEnter={e => e.currentTarget.style.color = '#f0f6fc'}
               onMouseLeave={e => e.currentTarget.style.color = '#6e7681'}
-              onClick={Quit}
+              onClick={() => AppGo.DoQuit()}
             >
               <span>⏻</span> 退出 Lumin
             </button>
@@ -1966,7 +1997,7 @@ export default function App() {
               }}
               onMouseEnter={e => e.currentTarget.style.color = '#f0f6fc'}
               onMouseLeave={e => e.currentTarget.style.color = '#6e7681'}
-              onClick={Quit}
+              onClick={() => AppGo.DoQuit()}
             >
               <span>⏻</span> 退出 Lumin
             </button>

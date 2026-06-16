@@ -128,6 +128,14 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
   const [enabling, setEnabling] = useState(false);
   const [hideIP, setHideIP] = useState(false);
 
+  // 切换服务器时立即清空旧数据，避免显示上一条服务器的监控信息
+  useEffect(() => {
+    setInfo(null);
+    setCpuHist(Array(30).fill(0));
+    setUploadHist(Array(30).fill(0));
+    setDownloadHist(Array(30).fill(0));
+  }, [sessionId]);
+
   const fetchInfo = useCallback(async () => {
     if (!sessionId || !enabled) return;
     try {

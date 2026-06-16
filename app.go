@@ -26,6 +26,7 @@ type App struct {
 	wsPort        int
 	wsMu          sync.Mutex
 	wsConns       map[string]*websocket.Conn // sessionId -> active WebSocket
+	quitting      bool                       // 标记用户确认退出，OnBeforeClose 放行
 }
 
 // NewApp creates a new App application struct
@@ -111,6 +112,12 @@ func (a *App) startup(ctx context.Context) {
 	// 启动时清理孤儿历史文件 + 后台同步
 	a.configManager.CleanupOrphanedHistory()
 	go a.configManager.AutoSync()
+}
+
+// DoQuit 用户确认退出，设标记让 OnBeforeClose 放行
+func (a *App) DoQuit() {
+	a.quitting = true
+	runtime.Quit(a.ctx)
 }
 
 // GetWsPort 返回本地 WebSocket 服务器端口，前端用于连接终端

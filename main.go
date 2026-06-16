@@ -28,6 +28,38 @@ func forceShowWindow(ctx context.Context) {
 	runtime.WindowShow(ctx)
 }
 
+// findAndShowWindow 用 EnumWindows 枚举所有窗口，找到标题为 "Lumin" 的窗口并唤醒
+func findAndShowWindow() {
+	user32 := syscall.NewLazyDLL("user32.dll")
+	procEnumWindows := user32.NewProc("EnumWindows")
+	procGetWindowText := user32.NewProc("GetWindowTextW")
+	procGetWindowTextLength := user32.NewProc("GetWindowTextLengthW")
+	procShowWindow := user32.NewProc("ShowWindow")
+	procSetForegroundWindow := user32.NewProc("SetForegroundWindow")
+
+	var targetHwnd syscall.Handle
+	callback := syscall.NewCallback(func(hwnd syscall.Handle, lParam uintptr) uintptr {
+		textLen, _, _ := procGetWindowTextLength.Call(uintptr(hwnd))
+		if textLen == 0 {
+			return 1 // continue enumeration
+		}
+		buf := make([]uint16, textLen+1)
+		procGetWindowText.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&buf[0])), uintptr(textLen+1))
+		if syscall.UTF16ToString(buf) == "Lumin" {
+			targetHwnd = hwnd
+			return 0 // stop enumeration
+		}
+		return 1 // continue enumeration
+	})
+
+	procEnumWindows.Call(callback, 0)
+	if targetHwnd != 0 {
+		const SW_RESTORE = 9
+		procShowWindow.Call(uintptr(targetHwnd), SW_RESTORE)
+		procSetForegroundWindow.Call(uintptr(targetHwnd))
+	}
+}
+
 func main() {
 	// 创建全局互斥锁，确保程序只能运行一个实例 (单例模式)
 	kernel32 := syscall.NewLazyDLL("kernel32.dll")
@@ -35,7 +67,7 @@ func main() {
 	mutexName, _ := syscall.UTF16PtrFromString("LuminSSH_Global_Single_Instance_Mutex")
 	_, _, errMutex := procCreateMutex.Call(0, 1, uintptr(unsafe.Pointer(mutexName)))
 	if errMutex == syscall.ERROR_ALREADY_EXISTS {
-		// 如果发现已经有一个实例在运行，则当前启动的实例静默退出
+		findAndShowWindow()
 		os.Exit(0)
 	}
 
@@ -85,10 +117,13 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 8, G: 12, B: 20, A: 255}, // #080c14
 		OnStartup:        app.startup,
-		// 拦截窗口关闭：隐藏到后台而非退出
+		// 拦截窗口关闭：弹出对话框让用户选择退出 / 系统托盘 / 取消
 		OnBeforeClose: func(ctx context.Context) bool {
-			runtime.WindowHide(ctx)
-			return true // return true = 取消关闭，由 WindowHide 处理
+			if app.quitting {
+				return false // 用户确认退出，放行
+			}
+			runtime.EventsEmit(ctx, "close-request")
+			return true // 取消关闭，由前端弹窗决定后续操作
 		},
 		Bind: []interface{}{
 			app,
