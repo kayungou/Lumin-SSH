@@ -1192,7 +1192,7 @@ export default function App() {
                     <div className="stat-lbl">{t('在线节点')}</div>
                   </div>
                   <div className="stat-item">
-                    <div className="stat-val" style={{ color: 'var(--red)' }}>{Object.values(pings).filter(p => !p.online && p.pinged).length}</div>
+                    <div className="stat-val" style={{ color: 'var(--red)' }}>{Object.values(pings).filter(p => !p.online).length}</div>
                     <div className="stat-lbl">{t('离线节点')}</div>
                   </div>
                 </div>

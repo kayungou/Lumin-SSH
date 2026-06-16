@@ -1,13 +1,13 @@
 <div align="center">
 
-# 🐸 Lumin
+# Lumin
 
-**🔥 一个轻量级、高性能且极具设计感的 SSH 终端管理软件 🚀**
+**一个轻量级、高性能的现代化 SSH 客户端**
 
-基于现代 Web 技术栈 (React 18 + Wails) 构建，主打极致的响应速度、高级拟态美学设计与多平台无缝数据漫游。
+基于 Go (Wails) + React 18 构建，追求极致的响应速度、玻璃拟态美学与多端数据漫游。
 
-[![Release](https://img.shields.io/github/v/release/dag6608/Lumin-SSH?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/dag6608/Lumin-SSH/releases)
-[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS-0078D6.svg?style=flat-square)](https://github.com/dag6608/Lumin-SSH/releases)
+[![Release](https://img.shields.io/github/v/release/angusdevgo/Lumin-SSH?style=flat-square&color=0078D6&label=RELEASE)](https://github.com/angusdevgo/Lumin-SSH/releases)
+[![Platform](https://img.shields.io/badge/PLATFORM-WINDOWS-0078D6.svg?style=flat-square)](https://github.com/angusdevgo/Lumin-SSH/releases)
 [![License](https://img.shields.io/badge/LICENSE-MIT-8CBA00.svg?style=flat-square)](LICENSE)
 
 [English](./README_EN.md) · [简体中文](./README.md)
@@ -16,63 +16,83 @@
 
 <div align="center">
   <br/>
-  <img src="assets/pc_empty_main.png" alt="Lumin Main Dashboard" width="800" />
+  <img src="assets/pc_empty_main.png" alt="Lumin 主面板" width="800" />
 </div>
 
 ---
 
-Lumin 不仅仅是一个 SSH 客户端，它是一套为了消除繁杂运维痛点而生的极客工具链。我们抛弃了传统终端界面的简陋与刻板，将系统级的高性能探针与 Glassmorphism（玻璃拟态）设计语言完美融合。
+Lumin 不只是一个 SSH 客户端，它是一套为运维工程师打造的极客工具链。我们将系统级高性能探针与 Glassmorphism（玻璃拟态）设计语言融合，让每一次连接都兼具效率与美感。
 
 <div align="center">
   <br/>
-  <img src="assets/pc_connected_session.png" alt="Lumin Terminal & Resource Monitor" width="800" />
+  <img src="assets/pc_connected_session.png" alt="Lumin 终端与资源监控" width="800" />
 </div>
 
 ## ✨ 核心特性
 
 - ⚡ **原生级全异步 PTY 引擎**
-  - 后端基于 Go 原生并发处理 I/O，前端采用 `WebSocket` 与 `xterm.js` 构建极低延迟的通信轨道。
-  - 支持 **预测本地回显 (Predictive Local Echo)** 机制，提供绝对丝滑、零卡顿的跟手输入与删除体验，即便在高延迟网络下依然畅快淋漓。
+  - 后端基于 Go 原生并发处理 I/O，前端采用 `WebSocket` 与 `xterm.js` 构建极低延迟通道。
+  - 支持 **预测本地回显 (Predictive Local Echo)** 机制，即便在高延迟网络下也能提供丝滑输入体验。
 - 🎨 **Glassmorphism 玻璃拟态美学**
-  - 全局沉浸式深/浅色动态主题，根据环境自适应流光溢彩。
-  - 所有模态框与右键菜单均附带流畅的毛玻璃遮罩层与微动效过渡，摒弃一切粗糙的视觉交互。
-- 📊 **系统级原生资源探针**
-  - 无需额外部署复杂的服务端 Agent。直连后，自动挂载高性能原生监控面板。
-  - 实时绘制毫秒级刷新率的 CPU 曲线、内存饼图及网络吞吐率表盘，掌控服务器状态于弹指间。
-- 📐 **ResizeObserver 智能布局计算**
-  - 终端面板原生集成 `ResizeObserver`，智能感知父级容器边界变动。
-  - 无论您如何调整底部分屏、切换侧边栏，终端行列都能实现**零裁剪、零遮挡**的完美重绘。
+  - 深色/浅色双主题，支持跟随系统自动切换。
+  - 自定义强调色，可选 Lumin Default、Tokyo Night、Catppuccin、Dracula 四套终端配色。
+  - 支持自定义终端底栏壁纸，可调节透明度。
+  - 所有弹窗均附带毛玻璃遮罩与微动效过渡。
+- 📊 **系统级资源探针**
+  - 无需额外部署 Agent，直连后自动挂载监控面板。
+  - 毫秒级刷新 CPU 曲线、内存饼图、网络吞吐、磁盘 I/O 等指标。
+- 📁 **远程文件管理器**
+  - 支持文件浏览、上传、下载、删除、重命名、新建目录。
+  - 内置代码编辑器，可直接编辑远程文件。
+  - 支持压缩/解压（tar.gz / zip）。
+  - 支持标签页、左侧分屏、底部分屏三种布局模式。
+- 📜 **命令历史与快捷指令**
+  - 自动捕获远程 Shell 命令历史，支持搜索与回放。
+  - 快捷指令片段库，一键发送常用命令。
 - ☁️ **全时无缝云端漫游 (WebDAV / R2 / FTP / SFTP)**
-  - 内置企业级多云同步模块，支持 WebDAV、Cloudflare R2、FTP、SFTP，每一次连接和配置修改都会生成高强度加密快照。多端登录，一键全自动恢复。
----
-
-## 🔒 本地高强度加密与无缝恢复
-
-所有的敏感连接信息与私钥文件，在写入本地磁盘或传输至 WebDAV 云端之前，均采用 **AES-GCM (256-bit)** 算法进行原子级隔离与高强度加密。
-得益于内置的 WebDAV 云端同步机制，只要您的账号验证通过，无论在任何设备上登录，亦或是重新安装软件，只需一键即可瞬间无损恢复您所有的服务器配置与历史快照，实现真正的多端无缝漫游。
+  - 支持 WebDAV、Cloudflare R2、FTP、SFTP 四种云存储后端。
+  - 每次配置变更自动 AES-256-GCM 加密快照，多端一键恢复。
+- 🔒 **本地高强度加密**
+  - 首次运行自动生成 32 字节随机密钥，所有密码、私钥、WebDAV 凭据均经 AES-GCM 加密后落盘。
+- 🌐 **智能延迟检测**
+  - 支持 SSH Banner RTT 和 TCP Dial 两种协议。
+  - SSH Banner 模式可穿透 TUN 代理（Clash / V2Ray）测出真实延迟。
+- 🚀 **自动更新**
+  - 启动时检测 GitHub Release 最新版本，支持一键下载安装。
+- 📌 **系统托盘驻留**
+  - 关闭窗口最小化至托盘，防止误关。
+  - 单实例保护，重复启动自动唤起已有窗口。
+- ⌨️ **可自定义快捷键**
+  - 复制、粘贴、清屏、新建标签页、SIGINT、EOF 等均支持自由绑定。
+- 🌍 **国际化**
+  - 支持简体中文 / English 切换。
 
 ---
 
 ## 🛠️ 构建指南
 
-如需自行克隆与二次开发：
+环境要求：**Go 1.20+** 与 **Node.js 18+**
 
-1. 环境依赖：**Go (1.20+)** 与 **Node.js (18+)**
-2. 安装 Wails 开发框架：
-   ```bash
-   go install github.com/wailsapp/wails/v2/cmd/wails@latest
-   ```
-3. 本地启动热重载开发模式：
-   ```bash
-   git clone https://github.com/dag6608/Lumin-SSH.git
-   cd Lumin-SSH/LuminSSH-Go
-   wails dev
-   ```
+```bash
+# 安装 Wails CLI
+go install github.com/wailsapp/wails/v2/cmd/wails@latest
+
+# 克隆仓库
+git clone https://github.com/angusdevgo/Lumin-SSH.git
+cd Lumin-SSH
+
+# 开发模式（热重载）
+wails dev
+
+# 生产构建
+wails build
+
+# 构建 NSIS 安装包（需安装 NSIS）
+wails build -nsis
+```
 
 ---
 
 ## 📜 许可证
 
-本项目遵循 [MIT License](LICENSE) 协议开源。欢迎任何极客与我们共同完善属于工程师的终端美学！
-
-
+本项目遵循 [MIT License](LICENSE) 协议开源。
