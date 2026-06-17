@@ -273,17 +273,27 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 			_ = client.Wait()
 			m.mu.Lock()
 			terminalIds := append([]string{}, m.connTerminals[connKey]...)
+			var sftpC *sftp.Client
+			var cli *ssh.Client
+			if entry, ok := m.clients[connKey]; ok {
+				sftpC = entry.SFTP
+				cli = entry.Client
+				delete(m.clients, connKey)
+				delete(m.connTerminals, connKey)
+				delete(m.probeDeployed, connKey)
+			}
 			m.mu.Unlock()
+
+			type closeItem struct {
+				stdin   io.WriteCloser
+				session *ssh.Session
+			}
+			var items []closeItem
 			for _, tid := range terminalIds {
 				m.mu.Lock()
 				ts, tsOk := m.sessions[tid]
 				if tsOk {
-					if ts.Stdin != nil {
-						ts.Stdin.Close()
-					}
-					if ts.Session != nil {
-						ts.Session.Close()
-					}
+					items = append(items, closeItem{stdin: ts.Stdin, session: ts.Session})
 					delete(m.sessions, tid)
 				}
 				m.mu.Unlock()
@@ -291,19 +301,21 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 					runtime.EventsEmit(m.ctx, "ssh-disconnected", tid)
 				}
 			}
-			m.mu.Lock()
-			if entry, ok := m.clients[connKey]; ok {
-				if entry.SFTP != nil {
-					entry.SFTP.Close()
+
+			for _, item := range items {
+				if item.stdin != nil {
+					item.stdin.Close()
 				}
-				if entry.Client != nil {
-					entry.Client.Close()
+				if item.session != nil {
+					item.session.Close()
 				}
-				delete(m.clients, connKey)
-				delete(m.connTerminals, connKey)
-				delete(m.probeDeployed, connKey)
 			}
-			m.mu.Unlock()
+			if sftpC != nil {
+				sftpC.Close()
+			}
+			if cli != nil {
+				cli.Close()
+			}
 		}()
 	}
 
@@ -443,6 +455,13 @@ func (m *SSHManager) getClientEntry(sessionId string) (*ssh.Client, *sftp.Client
 }
 
 func (m *SSHManager) Disconnect(sessionId string) {
+	defer func() {
+		if r := recover(); r != nil {
+			fmt.Printf("[Disconnect] panic recovered: %v\n", r)
+		}
+	}()
+
+	// 1. 在锁内完成 map 清理，收集需要关闭的资源
 	m.mu.Lock()
 	s, ok := m.sessions[sessionId]
 	if !ok {
@@ -450,13 +469,11 @@ func (m *SSHManager) Disconnect(sessionId string) {
 		return
 	}
 	connKey := s.ConnKey
-	if s.Stdin != nil {
-		s.Stdin.Close()
-	}
-	if s.Session != nil {
-		s.Session.Close()
-	}
 	delete(m.sessions, sessionId)
+
+	// 收集需要关闭的资源（避免在锁内执行可能阻塞的 Close 操作）
+	stdin := s.Stdin
+	sshSess := s.Session
 
 	// 从 connTerminals 中移除
 	terminals := m.connTerminals[connKey]
@@ -466,21 +483,33 @@ func (m *SSHManager) Disconnect(sessionId string) {
 			break
 		}
 	}
-	// 如果是最后一个终端，关闭共享客户端
+
+	var sftpToClose *sftp.Client
+	var clientToClose *ssh.Client
 	if len(m.connTerminals[connKey]) == 0 {
 		if entry, ok := m.clients[connKey]; ok {
-			if entry.SFTP != nil {
-				entry.SFTP.Close()
-			}
-			if entry.Client != nil {
-				entry.Client.Close()
-			}
+			sftpToClose = entry.SFTP
+			clientToClose = entry.Client
 			delete(m.clients, connKey)
 			delete(m.connTerminals, connKey)
 			delete(m.probeDeployed, connKey)
 		}
 	}
-	m.mu.Unlock()
+	m.mu.Unlock() // 尽早释放锁，避免 Close 阻塞影响其他操作
+
+	// 2. 在锁外关闭资源（服务器挂了时这些操作可能阻塞，但不会锁住其他 goroutine）
+	if stdin != nil {
+		stdin.Close()
+	}
+	if sshSess != nil {
+		sshSess.Close()
+	}
+	if sftpToClose != nil {
+		sftpToClose.Close()
+	}
+	if clientToClose != nil {
+		clientToClose.Close()
+	}
 }
 
 func (m *SSHManager) CloseSessionResources(sessionId string) {
@@ -494,16 +523,20 @@ func (m *SSHManager) CloseSessionResources(sessionId string) {
 	terminalIds := append([]string{}, m.connTerminals[connKey]...)
 	m.mu.Unlock()
 
+	// 收集所有需要关闭的资源
+	type closeItem struct {
+		stdin   io.WriteCloser
+		session *ssh.Session
+	}
+	var items []closeItem
+	var sftpToClose *sftp.Client
+	var clientToClose *ssh.Client
+
 	for _, tid := range terminalIds {
 		m.mu.Lock()
 		ts, tsOk := m.sessions[tid]
 		if tsOk {
-			if ts.Stdin != nil {
-				ts.Stdin.Close()
-			}
-			if ts.Session != nil {
-				ts.Session.Close()
-			}
+			items = append(items, closeItem{stdin: ts.Stdin, session: ts.Session})
 			delete(m.sessions, tid)
 		}
 		m.mu.Unlock()
@@ -511,17 +544,29 @@ func (m *SSHManager) CloseSessionResources(sessionId string) {
 
 	m.mu.Lock()
 	if entry, ok := m.clients[connKey]; ok {
-		if entry.SFTP != nil {
-			entry.SFTP.Close()
-		}
-		if entry.Client != nil {
-			entry.Client.Close()
-		}
+		sftpToClose = entry.SFTP
+		clientToClose = entry.Client
 		delete(m.clients, connKey)
 		delete(m.connTerminals, connKey)
 		delete(m.probeDeployed, connKey)
 	}
 	m.mu.Unlock()
+
+	// 在锁外关闭所有资源
+	for _, item := range items {
+		if item.stdin != nil {
+			item.stdin.Close()
+		}
+		if item.session != nil {
+			item.session.Close()
+		}
+	}
+	if sftpToClose != nil {
+		sftpToClose.Close()
+	}
+	if clientToClose != nil {
+		clientToClose.Close()
+	}
 }
 
 // OpenTerminal 为已有连接创建新的终端通道
@@ -759,6 +804,11 @@ func (m *SSHManager) executeCmdWithClient(client *ssh.Client, cmd string) (strin
 	// 防止服务器无响应时 goroutine/调用方永久阻塞
 	errCh := make(chan error, 1)
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				errCh <- fmt.Errorf("panic in session.Run: %v", r)
+			}
+		}()
 		errCh <- session.Run(cmd)
 	}()
 
@@ -897,7 +947,13 @@ func (m *SSHManager) deployProbeScript(sftpClient *sftp.Client, connKey string) 
 	return nil
 }
 
-func (m *SSHManager) GetSystemInfo(sessionId string) (map[string]interface{}, error) {
+func (m *SSHManager) GetSystemInfo(sessionId string) (result map[string]interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in GetSystemInfo: %v", r)
+			result = nil
+		}
+	}()
 	client, sftpClient, err := m.getClientEntry(sessionId)
 	if err != nil {
 		return nil, err
@@ -1285,7 +1341,13 @@ func (m *SSHManager) GetSystemInfo(sessionId string) (map[string]interface{}, er
 }
 
 // GetServerStaticInfo 获取服务器静态信息（OS/时区/主机名/CPU 型号），只在连接时调用一次
-func (m *SSHManager) GetServerStaticInfo(sessionId string) (map[string]interface{}, error) {
+func (m *SSHManager) GetServerStaticInfo(sessionId string) (result map[string]interface{}, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in GetServerStaticInfo: %v", r)
+			result = nil
+		}
+	}()
 	client, _, err := m.getClientEntry(sessionId)
 	if err != nil {
 		return nil, err

@@ -382,9 +382,6 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
       if (ws) { try { ws.close(); } catch (_) {} }
       termRef.current     = null;
       fitAddonRef.current = null;
-      if (webglAddon) {
-        try { webglAddon.dispose(); } catch (_) {}
-      }
       try { term.dispose(); } catch (_) {}
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
