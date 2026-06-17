@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"io"
@@ -1708,6 +1709,33 @@ func (m *SSHManager) UploadFileContent(sessionId string, fileName string, remote
 	}
 	if sftpClient == nil {
 		return fmt.Errorf("SFTP not available")
+	}
+
+	destPath := filepath.ToSlash(filepath.Join(remoteDir, fileName))
+	dst, err := sftpClient.Create(destPath)
+	if err != nil {
+		return err
+	}
+	defer dst.Close()
+
+	_, err = dst.Write(content)
+	return err
+}
+
+// UploadFileContentBase64 通过 base64 编码上传文件内容，避免前端将 Uint8Array
+// 展开为普通 Array 导致的内存爆炸（8-16 倍开销）。base64 仅 1.33 倍开销。
+func (m *SSHManager) UploadFileContentBase64(sessionId string, fileName string, remoteDir string, base64Content string) error {
+	_, sftpClient, err := m.getClientEntry(sessionId)
+	if err != nil {
+		return err
+	}
+	if sftpClient == nil {
+		return fmt.Errorf("SFTP not available")
+	}
+
+	content, err := base64.StdEncoding.DecodeString(base64Content)
+	if err != nil {
+		return fmt.Errorf("base64 解码失败: %w", err)
 	}
 
 	destPath := filepath.ToSlash(filepath.Join(remoteDir, fileName))

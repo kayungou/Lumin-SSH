@@ -300,6 +300,11 @@ func (a *App) UploadFileContent(sessionId string, fileName string, remoteDir str
 	return a.sshManager.UploadFileContent(sessionId, fileName, remoteDir, content)
 }
 
+// UploadFileContentBase64 通过 base64 编码上传文件内容，避免前端内存爆炸
+func (a *App) UploadFileContentBase64(sessionId string, fileName string, remoteDir string, base64Content string) error {
+	return a.sshManager.UploadFileContentBase64(sessionId, fileName, remoteDir, base64Content)
+}
+
 // UploadFile opens a file dialog to select a local file and uploads it to the remote path
 func (a *App) UploadFile(sessionId string, remotePath string) error {
 	filepaths, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{

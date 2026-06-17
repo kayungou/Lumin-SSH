@@ -509,16 +509,23 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
     });
   }
 
-  // Read a File as Array<number> for sending to the backend (via Wails JSON serialization)
-  function readFileAsArrayBuffer(file) {
+  // 读取文件为 base64 字符串（去掉 data URL 前缀），避免将 Uint8Array 展开为
+  // 普通 Array 导致的内存爆炸（8-16 倍开销）。base64 仅 1.33 倍开销。
+  const MAX_UPLOAD_SIZE = 100 * 1024 * 1024; // 100MB
+  function readFileAsBase64(file) {
     return new Promise((resolve, reject) => {
+      if (file.size > MAX_UPLOAD_SIZE) {
+        reject(new Error(`文件过大 (${(file.size / 1024 / 1024).toFixed(1)}MB)，最大支持 100MB`));
+        return;
+      }
       const reader = new FileReader();
       reader.onload = () => {
-        // Convert Uint8Array to plain Array so JSON.stringify produces [72,101,...] instead of {"0":72,"1":101,...}
-        resolve(Array.from(new Uint8Array(reader.result)));
+        const dataUrl = reader.result;
+        const commaIdx = dataUrl.indexOf(',');
+        resolve(commaIdx >= 0 ? dataUrl.slice(commaIdx + 1) : dataUrl);
       };
       reader.onerror = () => reject(reader.error);
-      reader.readAsArrayBuffer(file);
+      reader.readAsDataURL(file);
     });
   }
 
@@ -574,8 +581,8 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
             continue;
           }
           try {
-            const content = await readFileAsArrayBuffer(file);
-            await AppGo.UploadFileContent(sessionId, file.name, currentPath, content);
+            const content = await readFileAsBase64(file);
+            await AppGo.UploadFileContentBase64(sessionId, file.name, currentPath, content);
             fileCount++;
             uploadedNames.add(file.name);
           } catch (err) {
@@ -628,8 +635,8 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
               ? `${baseRemote}/${job.subDir}`
               : baseRemote;
             try {
-              const content = await readFileAsArrayBuffer(job.file);
-              await AppGo.UploadFileContent(sessionId, job.file.name, remoteDir, content);
+              const content = await readFileAsBase64(job.file);
+              await AppGo.UploadFileContentBase64(sessionId, job.file.name, remoteDir, content);
               fileCount++;
               uploadedNames.add(job.file.name);
             } catch (err) {
@@ -645,8 +652,8 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
           try { file = item.getAsFile(); } catch (_) { file = null; }
           if (!file) continue;
           try {
-            const content = await readFileAsArrayBuffer(file);
-            await AppGo.UploadFileContent(sessionId, file.name, currentPath, content);
+            const content = await readFileAsBase64(file);
+            await AppGo.UploadFileContentBase64(sessionId, file.name, currentPath, content);
             fileCount++;
             uploadedNames.add(file.name);
           } catch (err) {
@@ -660,8 +667,8 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
       for (const file of droppedFiles) {
         if (uploadedNames.has(file.name)) continue;
         try {
-          const content = await readFileAsArrayBuffer(file);
-          await AppGo.UploadFileContent(sessionId, file.name, currentPath, content);
+          const content = await readFileAsBase64(file);
+          await AppGo.UploadFileContentBase64(sessionId, file.name, currentPath, content);
           fileCount++;
           uploadedNames.add(file.name);
           pendingFailures.delete(file.name); // 兜底成功，移出失败记录

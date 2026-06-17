@@ -379,13 +379,9 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
       keys.push(keyName);
       const combined = keys.join('+');
 
-      setShortcuts((prev) => {
-        const updated = { ...prev, [listeningKey]: combined };
-        localStorage.setItem('appShortcuts', JSON.stringify(combined === 'Esc' ? '' : JSON.stringify(updated)));
-        // 直接存盘
-        localStorage.setItem('appShortcuts', JSON.stringify(updated));
-        return updated;
-      });
+      const updated = { ...shortcuts, [listeningKey]: combined };
+      setShortcuts(updated);
+      localStorage.setItem('appShortcuts', JSON.stringify(updated));
 
       addToast(`终端快捷键已修改为 ${combined}`, 'success');
       setListeningKey(null);

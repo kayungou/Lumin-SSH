@@ -726,7 +726,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
         pHist[cmd][num] = filtered.slice(0, 20);
       });
       setParamHistory(pHist);
-      try { AppGo.SaveParamHistory(JSON.stringify(pHist)); } catch (_) {}
+      AppGo.SaveParamHistory(JSON.stringify(pHist)).catch(() => {});
     }
 
     window.dispatchEvent(new CustomEvent('ssh-command-history', {
@@ -1109,7 +1109,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
                                       if (pHist[cmdKey]?.[p.num]) {
                                         pHist[cmdKey][p.num] = [];
                                         setParamHistory(pHist);
-                                        try { AppGo.SaveParamHistory(JSON.stringify(pHist)); } catch (_) {}
+                                        AppGo.SaveParamHistory(JSON.stringify(pHist)).catch(() => {});
                                       }
                                       setHistoryDropdown(null);
                                       setHistorySearch('');
