@@ -642,7 +642,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
     const text = (cmd ?? '').trim();
     AppGo.WriteTerminal(sessionId, text + '\r');
     termRef.current?.scrollToBottom();
-    if (text) {
+    if (text && text.length > 1 && !/^\d+$/.test(text)) {
       window.dispatchEvent(new CustomEvent('ssh-command-history', {
         detail: { sessionId: serverId, command: text, time: new Date().toISOString(), source: 'input' }
       }));
