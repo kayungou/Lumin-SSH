@@ -48,9 +48,16 @@ func (a *App) startup(ctx context.Context) {
 	// ── 启动本地 WebSocket 终端服务器 ─────────────────────────────────
 	// 不经过 Wails IPC，直接走 TCP loopback，延迟极低
 	mux := http.NewServeMux()
-	// 允许任何来源（WebView2 内部请求可能没有 Origin 头）
+	// 仅允许 Wails WebView 的 Origin（防止本机恶意网页通过 DNS rebinding 连接）
 	upgrader := websocket.Upgrader{
-		CheckOrigin:     func(r *http.Request) bool { return true },
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			// Wails WebView 的 Origin 通常是 wails:// 或 http://wails.localhost
+			return origin == "" ||
+				strings.HasPrefix(origin, "wails://") ||
+				strings.HasPrefix(origin, "http://wails.") ||
+				strings.HasPrefix(origin, "https://wails.")
+		},
 		ReadBufferSize:  4096,
 		WriteBufferSize: 32768,
 	}
@@ -559,7 +566,11 @@ func (pr *downloadProgressReader) Read(p []byte) (int, error) {
 
 // UpdateApp downloads the new exe from the given url, replaces the current running exe, and restarts the app.
 func (a *App) UpdateApp(downloadUrl string, filename string) error {
-	// 1. 发起请求下载新文件
+	// 1. 强制 HTTPS，防止明文下载可执行文件被篡改
+	if !strings.HasPrefix(downloadUrl, "https://") {
+		return fmt.Errorf("更新地址必须使用 HTTPS")
+	}
+	// 2. 发起请求下载新文件
 	resp, err := http.Get(downloadUrl)
 	if err != nil {
 		return fmt.Errorf("failed to download update: %w", err)

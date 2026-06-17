@@ -130,7 +130,12 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 
 		hostKeyCallback, err := knownhosts.New(knownHostsPath)
 		if err != nil {
-			hostKeyCallback = ssh.InsecureIgnoreHostKey()
+			// 创建空 known_hosts 文件后重试，而非禁用校验
+			os.WriteFile(knownHostsPath, []byte(""), 0600)
+			hostKeyCallback, err = knownhosts.New(knownHostsPath)
+			if err != nil {
+				return fmt.Errorf("无法初始化主机密钥校验: %w", err)
+			}
 		}
 
 		customHostKeyCallback := func(hostname string, remote net.Addr, key ssh.PublicKey) error {
@@ -1761,7 +1766,10 @@ func (m *SSHManager) CompressItem(sessionId string, remotePath string) error {
 	archiveName := base + ".tar.gz"
 
 	dir = strings.ReplaceAll(dir, "\\", "/")
-	cmd := fmt.Sprintf("cd '%s' && tar -czf '%s' '%s'", dir, archiveName, base)
+	safeDir := strings.ReplaceAll(dir, "'", "'\\''")
+	safeBase := strings.ReplaceAll(base, "'", "'\\''")
+	safeArchive := strings.ReplaceAll(archiveName, "'", "'\\''")
+	cmd := fmt.Sprintf("cd '%s' && tar -czf '%s' '%s'", safeDir, safeArchive, safeBase)
 
 	out, err := m.executeCmdWithClient(client, cmd)
 	if err != nil {
@@ -1779,19 +1787,21 @@ func (m *SSHManager) UncompressItem(sessionId string, remotePath string) error {
 	dir := filepath.Dir(remotePath)
 	base := filepath.Base(remotePath)
 	dir = strings.ReplaceAll(dir, "\\", "/")
+	safeDir := strings.ReplaceAll(dir, "'", "'\\''")
+	safeBase := strings.ReplaceAll(base, "'", "'\\''")
 
 	var cmd string
 	lowerBase := strings.ToLower(base)
 	if strings.HasSuffix(lowerBase, ".zip") {
-		cmd = fmt.Sprintf("cd '%s' && unzip -o '%s'", dir, base)
+		cmd = fmt.Sprintf("cd '%s' && unzip -o '%s'", safeDir, safeBase)
 	} else if strings.HasSuffix(lowerBase, ".tar.gz") || strings.HasSuffix(lowerBase, ".tgz") {
-		cmd = fmt.Sprintf("cd '%s' && tar -xzf '%s'", dir, base)
+		cmd = fmt.Sprintf("cd '%s' && tar -xzf '%s'", safeDir, safeBase)
 	} else if strings.HasSuffix(lowerBase, ".tar") {
-		cmd = fmt.Sprintf("cd '%s' && tar -xf '%s'", dir, base)
+		cmd = fmt.Sprintf("cd '%s' && tar -xf '%s'", safeDir, safeBase)
 	} else if strings.HasSuffix(lowerBase, ".tar.bz2") || strings.HasSuffix(lowerBase, ".tbz2") {
-		cmd = fmt.Sprintf("cd '%s' && tar -xjf '%s'", dir, base)
+		cmd = fmt.Sprintf("cd '%s' && tar -xjf '%s'", safeDir, safeBase)
 	} else if strings.HasSuffix(lowerBase, ".gz") {
-		cmd = fmt.Sprintf("cd '%s' && gunzip -f -k '%s'", dir, base)
+		cmd = fmt.Sprintf("cd '%s' && gunzip -f -k '%s'", safeDir, safeBase)
 	} else {
 		return fmt.Errorf("unsupported archive format")
 	}

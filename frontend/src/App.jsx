@@ -374,10 +374,11 @@ export default function App() {
         }
       } catch (_) {}
 
-      // 加入最近连接
+      // 加入最近连接（仅保留非敏感字段）
       setRecentServers((prev) => {
         const filtered = prev.filter((s) => s.id !== savedServer.id);
-        const updated = [savedServer, ...filtered].slice(0, 4);
+        const safeServer = { id: savedServer.id, name: savedServer.name, host: savedServer.host, port: savedServer.port, username: savedServer.username };
+        const updated = [safeServer, ...filtered].slice(0, 4);
         localStorage.setItem('recent_servers', JSON.stringify(updated));
         return updated;
       });
