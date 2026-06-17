@@ -138,14 +138,17 @@ export default function FileEditor({
   const handleSave = async () => {
     if (!activeFile || !isModified) return;
     setSaving(true);
-    await onSave(activeFile.path, currentContent);
-    setSaving(false);
-    // 保存成功后清除该文件的编辑缓存
-    setEditedContents(prev => {
-      const next = { ...prev };
-      delete next[activeFile.path];
-      return next;
-    });
+    try {
+      await onSave(activeFile.path, currentContent);
+      // 保存成功后清除该文件的编辑缓存
+      setEditedContents(prev => {
+        const next = { ...prev };
+        delete next[activeFile.path];
+        return next;
+      });
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleCloseCurrent = async () => {

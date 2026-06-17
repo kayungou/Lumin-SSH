@@ -159,6 +159,7 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 					m.mu.Unlock()
 
 					// 新主机密钥 —— 需要用户确认
+					m.mu.Lock()
 					m.pendingHostKeys[sessionId] = &PendingHostKey{
 						Conn:           conn,
 						Hostname:       hostname,
@@ -166,6 +167,7 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 						NewFingerprint: fingerprint,
 						OldKeys:        nil, // nil 表示首次连接
 					}
+					m.mu.Unlock()
 					return ErrHostKeyChanged
 				} else {
 					fingerprint := ssh.FingerprintSHA256(key)
@@ -178,6 +180,7 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 					}
 					m.mu.Unlock()
 
+					m.mu.Lock()
 					m.pendingHostKeys[sessionId] = &PendingHostKey{
 						Conn:           conn,
 						Hostname:       hostname,
@@ -185,6 +188,7 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 						NewFingerprint: fingerprint,
 						OldKeys:        keyErr.Want,
 					}
+					m.mu.Unlock()
 					return ErrHostKeyChanged
 				}
 			}

@@ -227,10 +227,11 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
 
     // ── WebSocket 连接 & Predictive Local Echo ─────────────────────
     let ws = null;
+    let cancelled = false;
     const pendingEchoes = [];
 
     AppGo.GetWsPort().then((port) => {
-      if (!port || !termRef.current) return;
+      if (cancelled || !port || !termRef.current) return;
       ws = new WebSocket(`ws://127.0.0.1:${port}/ws/${sessionId}`);
       ws.binaryType = 'arraybuffer';
       wsRef.current = ws;
@@ -377,6 +378,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
     });
 
     return () => {
+      cancelled = true;
       clearTimeout(fitTimer);
       clearTimeout(cwdTimer);
       if (ws) { try { ws.close(); } catch (_) {} }
