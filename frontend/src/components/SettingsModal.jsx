@@ -363,6 +363,40 @@ function ProviderCard({ provider, form, configured, editing, onEdit, onCancelEdi
   );
 }
 
+// 快捷键行配置
+const SHORTCUT_ROWS = [
+  { label: '从终端复制', key: 'copy' },
+  { label: '粘贴到终端', key: 'paste' },
+  { label: '清空终端缓冲区', key: 'clear' },
+  { label: '新建本地标签页', key: 'newTab' },
+  { label: '打断当前指令 (SIGINT)', key: 'sigint' },
+  { label: '结束终端会话 (EOF)', key: 'eof' },
+  { label: '后台挂起进程 (SIGTSTP)', key: 'suspend' },
+  { label: '清空当前输入行', key: 'clearLine' },
+];
+
+// 单个快捷键行
+function ShortcutRow({ label, keyName, shortcuts, listeningKey, onSetListening, withBorder }) {
+  const isListening = listeningKey === keyName;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', ...(withBorder ? { borderBottom: '1px solid var(--border)' } : {}) }}>
+      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>{label}</span>
+      <button
+        onClick={() => onSetListening(keyName)}
+        style={{
+          fontFamily: 'var(--font-mono)', fontSize: 12,
+          color: isListening ? 'var(--green)' : 'var(--text-4)',
+          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
+          border: isListening ? '1px solid var(--green)' : '1px solid var(--border)',
+          transition: 'var(--transition)'
+        }}
+      >
+        {isListening ? '请按下快捷键...' : shortcuts[keyName]}
+      </button>
+    </div>
+  );
+}
+
 export default function SettingsModal({ onClose, addToast, onRestored }) {
   const CURRENT_VERSION = APP_VERSION;
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -513,6 +547,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
       const updated = { ...shortcuts, [listeningKey]: combined };
       setShortcuts(updated);
       localStorage.setItem('appShortcuts', JSON.stringify(updated));
+      window.dispatchEvent(new CustomEvent('app-shortcuts-changed', { detail: updated }));
 
       addToast(`终端快捷键已修改为 ${combined}`, 'success');
       setListeningKey(null);
@@ -1347,135 +1382,17 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                 <div>
                   <h3 style={{ fontSize: 14, color: 'var(--text-1)', marginBottom: 12, fontWeight: 600 }}>终端快捷键</h3>
                   <div className="form-group" style={{ background: 'var(--bg-2)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>从终端复制</span>
-                      <button 
-                        onClick={() => setListeningKey('copy')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'copy' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'copy' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'copy' ? '请按下快捷键...' : shortcuts.copy}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>粘贴到终端</span>
-                      <button 
-                        onClick={() => setListeningKey('paste')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'paste' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'paste' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'paste' ? '请按下快捷键...' : shortcuts.paste}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>清空终端缓冲区</span>
-                      <button 
-                        onClick={() => setListeningKey('clear')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'clear' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'clear' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'clear' ? '请按下快捷键...' : shortcuts.clear}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>新建本地标签页</span>
-                      <button 
-                        onClick={() => setListeningKey('newTab')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'newTab' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'newTab' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'newTab' ? '请按下快捷键...' : shortcuts.newTab}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>打断当前指令 (SIGINT)</span>
-                      <button 
-                        onClick={() => setListeningKey('sigint')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'sigint' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'sigint' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'sigint' ? '请按下快捷键...' : shortcuts.sigint}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>结束终端会话 (EOF)</span>
-                      <button 
-                        onClick={() => setListeningKey('eof')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'eof' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'eof' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'eof' ? '请按下快捷键...' : shortcuts.eof}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>后台挂起进程 (SIGTSTP)</span>
-                      <button 
-                        onClick={() => setListeningKey('suspend')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'suspend' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'suspend' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'suspend' ? '请按下快捷键...' : shortcuts.suspend}
-                      </button>
-                    </div>
-
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px' }}>
-                      <span style={{ color: 'var(--text-2)', fontSize: 13 }}>清空当前输入行</span>
-                      <button 
-                        onClick={() => setListeningKey('clearLine')} 
-                        style={{ 
-                          fontFamily: 'var(--font-mono)', fontSize: 12, 
-                          color: listeningKey === 'clearLine' ? 'var(--green)' : 'var(--text-4)', 
-                          background: 'var(--bg-1)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-                          border: listeningKey === 'clearLine' ? '1px solid var(--green)' : '1px solid var(--border)',
-                          transition: 'var(--transition)'
-                        }}
-                      >
-                        {listeningKey === 'clearLine' ? '请按下快捷键...' : shortcuts.clearLine}
-                      </button>
-                    </div>
-
+                    {SHORTCUT_ROWS.map((row, idx) => (
+                      <ShortcutRow
+                        key={row.key}
+                        label={row.label}
+                        keyName={row.key}
+                        shortcuts={shortcuts}
+                        listeningKey={listeningKey}
+                        onSetListening={setListeningKey}
+                        withBorder={idx < SHORTCUT_ROWS.length - 1}
+                      />
+                    ))}
                   </div>
                   <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-4)' }}>注：部分快捷键行为受终端内的 Shell 设置影响。</p>
                 </div>

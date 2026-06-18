@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useMemo } from 'react';
 import { useTranslation } from '../i18n.js';
 import { Monitor, Pencil, Link, Trash2 } from 'lucide-react';
 
@@ -64,6 +64,15 @@ export default function ServerList({
   const [hoveredId, setHoveredId] = useState(null);
   const menuRef = useRef(null);
 
+  // 预计算已连接会话的 Map，将 O(n×m) 查找优化为 O(1)
+  const connectedSessionMap = useMemo(() => {
+    const m = new Map();
+    sessions.forEach(s => {
+      if (s.status === 'connected') m.set(s.serverId, s);
+    });
+    return m;
+  }, [sessions]);
+
   const mask = (text) => hideSensitive ? String(text || '').replace(/[^@.:\/\s-]/g, '*') : text;
 
   // Close context menu on outside click
@@ -128,7 +137,7 @@ export default function ServerList({
           const active = isActive(server);
           const connected = hasSession(server);
           // 优先用实际查询到的 osInfo
-          const sessionForServer = sessions.find(s => s.serverId === server.id && s.status === 'connected');
+          const sessionForServer = connectedSessionMap.get(server.id);
           const osInfo = getOSInfo(server.name, server.os, sessionForServer?.osInfo || null);
           const isHovered = hoveredId === server.id;
 
@@ -269,7 +278,7 @@ export default function ServerList({
               const latClass = ping ? LATENCY_CLASS(ping.latency) : 'offline';
               const active = isActive(server);
               const connected = hasSession(server);
-              const sessionForServer = sessions.find(s => s.serverId === server.id && s.status === 'connected');
+              const sessionForServer = connectedSessionMap.get(server.id);
               const osInfo = getOSInfo(server.name, server.os, sessionForServer?.osInfo || null);
               const isHovered = hoveredId === server.id;
 

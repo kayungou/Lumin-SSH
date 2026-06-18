@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -33,6 +35,12 @@ type RemoteStorage interface {
 // 同步后触发备份时会使用该值清理旧备份。未实现者（如 webdavStorage）保持原行为（不清理）。
 type maxBackupsProvider interface {
 	MaxBackups() int
+}
+
+// storageCloser 是可选接口：后端若持有需要显式释放的底层连接（如 SFTP/FTP），
+// 调用方应在使用完毕后 defer Close() 以避免连接泄漏。webdav/r2 等基于 HTTP 的后端无需实现。
+type storageCloser interface {
+	Close() error
 }
 
 // ─── 同步快照 ─────────────────────────────────────────────
@@ -393,11 +401,24 @@ type providerEntry struct {
 	maxBackups int
 }
 
-// AutoSync 自动同步：以本地为准推送变更到所有已配置的云端
+// AutoSync 自动同步：以本地为准推送变更到所有已配置的云端。
+// 各 provider 只读本地文件（GetConnections/loadRawFile 有 c.mu 保护）、写各自远端，无冲突，
+// 因此并行调度以降低总耗时。任一 provider 失败仅记录日志（autoSyncProvider 内部已记录），不影响其他。
 func (c *ConfigManager) AutoSync() {
-	for _, p := range c.getSyncProviders() {
-		c.autoSyncProvider(p.storage, p.maxBackups)
+	providers := c.getSyncProviders()
+	var wg sync.WaitGroup
+	for _, p := range providers {
+		wg.Add(1)
+		go func(p providerEntry) {
+			defer wg.Done()
+			// 释放该 provider 持有的底层连接（如 SFTP/FTP），webdav/r2 无需关闭
+			if cl, ok := p.storage.(storageCloser); ok {
+				defer cl.Close()
+			}
+			c.autoSyncProvider(p.storage, p.maxBackups)
+		}(p)
 	}
+	wg.Wait()
 }
 
 // AutoSyncToWebdav 保留向后兼容
@@ -526,4 +547,29 @@ func (c *ConfigManager) restoreSnapshotToLocal(snap *SyncSnapshot) {
 	if snap.QuickCommands != "" {
 		os.WriteFile(c.quickCmdFile, []byte(snap.QuickCommands), 0600)
 	}
+}
+
+// restoreFromProvider 是 RestoreFromXxxFile 的共享实现：
+// 读取远端文件 → 解密解析快照 → 写回本地。
+// 统一用 filepath.Base 防止路径穿越。
+func (c *ConfigManager) restoreFromProvider(s RemoteStorage, filename string) error {
+	filename = filepath.Base(filename) // 防止路径穿越
+	data, err := s.ReadFile(filename)
+	if err != nil {
+		return err
+	}
+	snap, err := c.decryptAndParseSnapshot(string(data), s.EncryptKey())
+	if err != nil {
+		return err
+	}
+	c.restoreSnapshotToLocal(snap)
+	return nil
+}
+
+// restoreResult 将 restoreFromProvider 的 error 结果包装为各 Restore 方法统一的返回值
+func restoreResult(err error) (map[string]interface{}, error) {
+	if err != nil {
+		return nil, err
+	}
+	return map[string]interface{}{"success": true}, nil
 }

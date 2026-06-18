@@ -255,37 +255,9 @@ func (c *ConfigManager) SyncFromR2() (map[string]interface{}, error) {
 }
 
 func (c *ConfigManager) RestoreFromR2File(objectKey string) (map[string]interface{}, error) {
-	conf := c.GetR2Config()
-	if conf == nil {
-		return nil, fmt.Errorf("R2 not configured")
-	}
-	cli, err := c.newR2Client()
+	s, _, err := c.newR2Storage()
 	if err != nil {
 		return nil, err
 	}
-
-	ctx := context.Background()
-	fullKey := conf.Prefix + objectKey
-	obj, err := cli.GetObject(ctx, conf.Bucket, fullKey, minio.GetObjectOptions{})
-	if err != nil {
-		return nil, err
-	}
-	defer obj.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(obj)
-	if err != nil {
-		return nil, err
-	}
-
-	key := c.getR2Key()
-	snap, err := c.decryptAndParseSnapshot(buf.String(), key)
-	if err != nil {
-		return nil, err
-	}
-
-	c.restoreSnapshotToLocal(snap)
-	return map[string]interface{}{
-		"success": true,
-	}, nil
+	return restoreResult(c.restoreFromProvider(s, objectKey))
 }

@@ -431,28 +431,11 @@ func (c *ConfigManager) SyncFromWebdav() (map[string]interface{}, error) {
 }
 
 func (c *ConfigManager) RestoreFromWebdavFile(filename string) (map[string]interface{}, error) {
-	confMap := c.GetWebdavConfig()
-	if confMap == nil {
-		return nil, fmt.Errorf("WebDAV not configured")
-	}
-	client := gowebdav.NewClient(confMap["url"], confMap["username"], confMap["password"])
-	remoteFile := filepath.ToSlash(filepath.Join(confMap["remotePath"], filename))
-
-	data, err := client.Read(remoteFile)
+	s, _, err := c.newWebdavStorage()
 	if err != nil {
 		return nil, err
 	}
-
-	key := c.getWebdavKey()
-	snap, err := c.decryptAndParseSnapshot(string(data), key)
-	if err != nil {
-		return nil, err
-	}
-
-	c.restoreSnapshotToLocal(snap)
-	return map[string]interface{}{
-		"success": true,
-	}, nil
+	return restoreResult(c.restoreFromProvider(s, filename))
 }
 
 // ─── 同步模式配置 ─────────────────────────────────────────

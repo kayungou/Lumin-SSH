@@ -248,22 +248,32 @@ func (c *ConfigManager) ensureSFTPDir(client *sftp.Client) error {
 
 type sftpStorage struct {
 	c          *ConfigManager
+	client     *sftp.Client
+	sshClient  *ssh.Client
 	remoteDir  string
 	key        []byte
 	maxBackups int
 }
 
+// Close 关闭底层 SFTP 与 SSH 连接
+func (s *sftpStorage) Close() error {
+	var err1, err2 error
+	if s.client != nil {
+		err1 = s.client.Close()
+	}
+	if s.sshClient != nil {
+		err2 = s.sshClient.Close()
+	}
+	if err1 != nil {
+		return err1
+	}
+	return err2
+}
+
 func (s *sftpStorage) MaxBackups() int { return s.maxBackups }
 
 func (s *sftpStorage) ListFiles() ([]RemoteFile, error) {
-	client, sshClient, err := s.c.newSFTPClient()
-	if err != nil {
-		return nil, err
-	}
-	defer client.Close()
-	defer sshClient.Close()
-
-	files, err := client.ReadDir(s.remoteDir)
+	files, err := s.client.ReadDir(s.remoteDir)
 	if err != nil {
 		return nil, err
 	}
@@ -280,15 +290,8 @@ func (s *sftpStorage) ListFiles() ([]RemoteFile, error) {
 }
 
 func (s *sftpStorage) ReadFile(name string) ([]byte, error) {
-	client, sshClient, err := s.c.newSFTPClient()
-	if err != nil {
-		return nil, err
-	}
-	defer client.Close()
-	defer sshClient.Close()
-
 	path := strings.TrimSuffix(s.remoteDir, "/") + "/" + name
-	f, err := client.Open(path)
+	f, err := s.client.Open(path)
 	if err != nil {
 		return nil, err
 	}
@@ -300,19 +303,12 @@ func (s *sftpStorage) ReadFile(name string) ([]byte, error) {
 }
 
 func (s *sftpStorage) WriteFile(name string, data []byte) error {
-	client, sshClient, err := s.c.newSFTPClient()
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	defer sshClient.Close()
-
-	if err := s.c.ensureSFTPDir(client); err != nil {
+	if err := s.c.ensureSFTPDir(s.client); err != nil {
 		return err
 	}
 
 	path := strings.TrimSuffix(s.remoteDir, "/") + "/" + name
-	f, err := client.Create(path)
+	f, err := s.client.Create(path)
 	if err != nil {
 		return err
 	}
@@ -326,14 +322,8 @@ func (s *sftpStorage) WriteFile(name string, data []byte) error {
 }
 
 func (s *sftpStorage) DeleteFile(name string) error {
-	client, sshClient, err := s.c.newSFTPClient()
-	if err != nil {
-		return err
-	}
-	defer client.Close()
-	defer sshClient.Close()
 	path := strings.TrimSuffix(s.remoteDir, "/") + "/" + name
-	return client.Remove(path)
+	return s.client.Remove(path)
 }
 
 func (s *sftpStorage) EncryptKey() []byte { return s.key }
@@ -343,7 +333,18 @@ func (c *ConfigManager) newSFTPStorage() (RemoteStorage, int, error) {
 	if conf == nil {
 		return nil, 0, fmt.Errorf("SFTP not configured")
 	}
-	return &sftpStorage{c: c, remoteDir: conf.RemoteDir, key: c.getSFTPKey(), maxBackups: conf.MaxBackups}, conf.MaxBackups, nil
+	client, sshClient, err := c.newSFTPClient()
+	if err != nil {
+		return nil, 0, err
+	}
+	return &sftpStorage{
+		c:          c,
+		client:     client,
+		sshClient:  sshClient,
+		remoteDir:  conf.RemoteDir,
+		key:        c.getSFTPKey(),
+		maxBackups: conf.MaxBackups,
+	}, conf.MaxBackups, nil
 }
 
 // BackupToSFTP 备份到 SFTP
@@ -351,6 +352,9 @@ func (c *ConfigManager) BackupToSFTP() (map[string]interface{}, error) {
 	s, max, err := c.newSFTPStorage()
 	if err != nil {
 		return nil, err
+	}
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
 	}
 	return c.backupConnections(s, max)
 }
@@ -361,6 +365,9 @@ func (c *ConfigManager) ListSFTPBackups() ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
+	}
 	return c.listBackupFiles(s)
 }
 
@@ -370,44 +377,19 @@ func (c *ConfigManager) SyncFromSFTP() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
+	}
 	return c.syncFromProvider(s)
 }
 
 func (c *ConfigManager) RestoreFromSFTPFile(filename string) (map[string]interface{}, error) {
-	filename = filepath.Base(filename) // 防止路径穿越
-	conf := c.GetSFTPConfig()
-	if conf == nil {
-		return nil, fmt.Errorf("SFTP not configured")
-	}
-
-	client, sshClient, err := c.newSFTPClient()
+	s, _, err := c.newSFTPStorage()
 	if err != nil {
 		return nil, err
 	}
-	defer client.Close()
-	defer sshClient.Close()
-
-	remotePath := strings.TrimSuffix(conf.RemoteDir, "/") + "/" + filename
-	f, err := client.Open(remotePath)
-	if err != nil {
-		return nil, fmt.Errorf("打开远程文件失败：%v", err)
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
 	}
-	defer f.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(f)
-	if err != nil {
-		return nil, fmt.Errorf("读取远程文件失败：%v", err)
-	}
-
-	key := c.getSFTPKey()
-	snap, err := c.decryptAndParseSnapshot(buf.String(), key)
-	if err != nil {
-		return nil, err
-	}
-
-	c.restoreSnapshotToLocal(snap)
-	return map[string]interface{}{
-		"success": true,
-	}, nil
+	return restoreResult(c.restoreFromProvider(s, filename))
 }

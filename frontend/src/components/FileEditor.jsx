@@ -256,7 +256,9 @@ export default function FileEditor({
     window.addEventListener('mouseup', onUp);
   };
 
-  const lang = activeFile ? getLanguage(activeFile.name) : null;
+  // memo 化 lang 和 extensions，避免每次渲染创建新 LanguageSupport 实例导致 CodeMirror 重新装配
+  const lang = useMemo(() => activeFile ? getLanguage(activeFile.name) : null, [activeFile?.name]);
+  const extensions = useMemo(() => lang ? [lang] : [], [lang]);
   const ext = activeFile ? (activeFile.name.split('.').pop() || '').toLowerCase() : '';
 
   // 控制 split host / container 布局
@@ -491,7 +493,7 @@ export default function FileEditor({
             height="100%"
             minHeight="200px"
             theme={oneDark}
-            extensions={lang ? [lang] : []}
+            extensions={extensions}
             onChange={handleChange}
             style={{ fontSize: 14, height: '100%' }}
             basicSetup={{

@@ -30,8 +30,15 @@ type App struct {
 	wsPort        int
 	wsToken       string
 	wsMu          sync.Mutex
-	wsConns       map[string]*websocket.Conn // sessionId -> active WebSocket
-	quitting      atomic.Bool                // 标记用户确认退出，OnBeforeClose 放行（跨 goroutine 访问需原子操作）
+	wsConns       map[string]*wsEntry // sessionId -> active WebSocket
+	quitting      atomic.Bool         // 标记用户确认退出，OnBeforeClose 放行（跨 goroutine 访问需原子操作）
+}
+
+// wsEntry 包装一个 WebSocket 连接及其独立写锁。
+// wsMu 仅保护 map 增删改查；写消息时用每连接独立锁，避免慢客户端阻塞其他 session。
+type wsEntry struct {
+	conn    *websocket.Conn
+	writeMu sync.Mutex
 }
 
 // NewApp creates a new App application struct
@@ -39,7 +46,7 @@ func NewApp() *App {
 	return &App{
 		sshManager:    NewSSHManager(),
 		configManager: NewConfigManager(),
-		wsConns:       make(map[string]*websocket.Conn),
+		wsConns:       make(map[string]*wsEntry),
 	}
 }
 
@@ -96,8 +103,9 @@ func (a *App) startup(ctx context.Context) {
 		defer conn.Close()
 
 		// 注册当前 WebSocket 连接
+		entry := &wsEntry{conn: conn}
 		a.wsMu.Lock()
-		a.wsConns[sessionId] = conn
+		a.wsConns[sessionId] = entry
 		a.wsMu.Unlock()
 		defer func() {
 			a.wsMu.Lock()
@@ -161,19 +169,28 @@ func (a *App) GetWsToken() string {
 
 // WriteWsToSession 将 WebSocket 输出写入给指定 session 的 WS 连接
 func (a *App) WriteWsOutput(sessionId string, data []byte) {
+	// 仅在 wsMu 下取出 entry，写消息时用每连接独立锁，避免慢客户端阻塞其他 session
 	a.wsMu.Lock()
-	defer a.wsMu.Unlock()
-	conn, ok := a.wsConns[sessionId]
-	if !ok || conn == nil {
+	entry, ok := a.wsConns[sessionId]
+	a.wsMu.Unlock()
+	if !ok || entry == nil {
 		return
 	}
+
+	entry.writeMu.Lock()
+	defer entry.writeMu.Unlock()
 	// 设置写超时，防止前端停止读取后 goroutine 永久阻塞
-	conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
-	err := conn.WriteMessage(websocket.BinaryMessage, data)
+	entry.conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+	err := entry.conn.WriteMessage(websocket.BinaryMessage, data)
 	if err != nil {
 		// 写失败（超时/连接断开），关闭并移除该连接
-		delete(a.wsConns, sessionId)
-		conn.Close()
+		a.wsMu.Lock()
+		// 二次校验：可能已被其他 goroutine 替换或移除
+		if cur, ok := a.wsConns[sessionId]; ok && cur == entry {
+			delete(a.wsConns, sessionId)
+		}
+		a.wsMu.Unlock()
+		entry.conn.Close()
 	}
 }
 
@@ -668,14 +685,20 @@ func (a *App) UpdateApp(downloadUrl string, filename string) error {
 		if shaReadErr != nil {
 			fmt.Printf("[UpdateApp] warning: failed to read .sha256 file, skipping verification: %v\n", shaReadErr)
 		} else {
-			// 计算下载文件的 SHA256
-			downloadedData, readErr := os.ReadFile(targetPath)
-			if readErr != nil {
+			// 计算下载文件的 SHA256（流式读取，避免将整个安装包读入内存）
+			f, openErr := os.Open(targetPath)
+			if openErr != nil {
 				os.Remove(targetPath)
-				return fmt.Errorf("failed to read downloaded file for verification: %w", readErr)
+				return fmt.Errorf("failed to open downloaded file for verification: %w", openErr)
 			}
-			actualHash := sha256.Sum256(downloadedData)
-			actualHashHex := hex.EncodeToString(actualHash[:])
+			h := sha256.New()
+			if _, copyErr := io.Copy(h, f); copyErr != nil {
+				f.Close()
+				os.Remove(targetPath)
+				return fmt.Errorf("failed to hash downloaded file: %w", copyErr)
+			}
+			f.Close()
+			actualHashHex := hex.EncodeToString(h.Sum(nil))
 
 			// .sha256 文件内容通常是 "<hash>  <filename>" 格式，取第一个字段
 			expectedHash := strings.Fields(strings.TrimSpace(string(shaBody)))

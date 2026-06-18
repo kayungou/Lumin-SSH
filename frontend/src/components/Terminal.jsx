@@ -96,6 +96,10 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
   const quickCmdsRef                          = useRef(null);
   const pendingCmdRef                         = useRef('');
 
+  // 热路径缓存：避免在按键/消息回调中频繁读取 localStorage
+  const shortcutsRef = useRef(null);
+  const localEchoRef = useRef(localStorage.getItem('terminalLocalEcho') !== 'false');
+
   // ── 初始化 xterm + WebSocket 终端通道 ────────────────────────────────
   // xterm.js 通过 AttachAddon + WebSocket 直接连到本地 Go WebSocket 服务器
   // 完全绕开 Wails IPC跨进程通信，走 TCP loopback 延迟极低
@@ -139,15 +143,21 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
 
     // ── 自定义快捷键 ──────────────────────────────────────────────
 
+    // 初始化快捷键缓存（移出按键热路径，仅在首次或变更时读取）
+    if (shortcutsRef.current === null) {
+      try {
+        const saved = localStorage.getItem('appShortcuts');
+        shortcutsRef.current = saved ? JSON.parse(saved) : { copy: 'Ctrl+C', paste: 'Ctrl+V', clear: 'Ctrl+L', newTab: 'Ctrl+T' };
+      } catch (_) {
+        shortcutsRef.current = { copy: 'Ctrl+C', paste: 'Ctrl+V', clear: 'Ctrl+L', newTab: 'Ctrl+T' };
+      }
+    }
+
     term.attachCustomKeyEventHandler((e) => {
       if (e.type !== 'keydown') return true;
 
-      // 1. 获取用户自定义的快捷键配置
-      let customShortcuts = { copy: 'Ctrl+C', paste: 'Ctrl+V', clear: 'Ctrl+L', newTab: 'Ctrl+T' };
-      try {
-        const saved = localStorage.getItem('appShortcuts');
-        if (saved) customShortcuts = JSON.parse(saved);
-      } catch (_) {}
+      // 1. 获取用户自定义的快捷键配置（从 ref 缓存读取，避免热路径访问 localStorage）
+      const customShortcuts = shortcutsRef.current;
 
       // 2. 解析当前按下的组合键字符串（如 "Ctrl+C", "Ctrl+Shift+V"）
       const keys = [];
@@ -250,7 +260,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         if (!termRef.current) return;
 
         // 如果没有正在预测的字符，直接使用原生 Uint8Array 交给 xterm.js 渲染（最快且无损，避免 TextDecoder 吃字符）
-        if (localStorage.getItem('terminalLocalEcho') === 'false' || pendingEchoes.length === 0) {
+        if (!localEchoRef.current || pendingEchoes.length === 0) {
           termRef.current.write(typeof ev.data === 'string' ? ev.data : new Uint8Array(ev.data));
           return;
         }
@@ -351,7 +361,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
       }
 
       // Local Echo 逻辑 (恢复默认开启)
-      if (localStorage.getItem('terminalLocalEcho') !== 'false') {
+      if (localEchoRef.current) {
         // 如果输入中不包含控制字符（如方向键、Esc、退格等），则视作常规可见输入（支持多字符连击或粘贴）
         if (!/[\x00-\x1F\x7F]/.test(data)) {
           // 由于 JavaScript 中部分多字节字符的 length 表现，这里按照字符串常规长度累加是安全的，
@@ -474,6 +484,22 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
     };
     window.addEventListener('terminal-theme-changed', handleThemeChange);
     return () => window.removeEventListener('terminal-theme-changed', handleThemeChange);
+  }, []);
+
+  // 监听快捷键 & 本地回显变更，同步更新 ref 缓存（保持设置即时生效）
+  useEffect(() => {
+    const handleShortcutsChange = (e) => {
+      shortcutsRef.current = e.detail;
+    };
+    const handleLocalEchoChange = (e) => {
+      localEchoRef.current = e.detail !== false;
+    };
+    window.addEventListener('app-shortcuts-changed', handleShortcutsChange);
+    window.addEventListener('terminal-local-echo-changed', handleLocalEchoChange);
+    return () => {
+      window.removeEventListener('app-shortcuts-changed', handleShortcutsChange);
+      window.removeEventListener('terminal-local-echo-changed', handleLocalEchoChange);
+    };
   }, []);
 
   const handleContextMenu = (e) => {

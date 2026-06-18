@@ -184,21 +184,24 @@ func (c *ConfigManager) ensureFTPDir(client *ftp.ServerConn) error {
 
 type ftpStorage struct {
 	c          *ConfigManager
+	client     *ftp.ServerConn
 	remoteDir  string
 	key        []byte
 	maxBackups int
 }
 
+// Close 关闭底层 FTP 连接
+func (s *ftpStorage) Close() error {
+	if s.client != nil {
+		return s.client.Quit()
+	}
+	return nil
+}
+
 func (s *ftpStorage) MaxBackups() int { return s.maxBackups }
 
 func (s *ftpStorage) ListFiles() ([]RemoteFile, error) {
-	client, err := s.c.newFTPClient()
-	if err != nil {
-		return nil, err
-	}
-	defer client.Quit()
-
-	entries, err := client.List(s.remoteDir)
+	entries, err := s.client.List(s.remoteDir)
 	if err != nil {
 		return nil, err
 	}
@@ -215,14 +218,8 @@ func (s *ftpStorage) ListFiles() ([]RemoteFile, error) {
 }
 
 func (s *ftpStorage) ReadFile(name string) ([]byte, error) {
-	client, err := s.c.newFTPClient()
-	if err != nil {
-		return nil, err
-	}
-	defer client.Quit()
-
 	path := strings.TrimRight(s.remoteDir, "/") + "/" + name
-	resp, err := client.Retr(path)
+	resp, err := s.client.Retr(path)
 	if err != nil {
 		return nil, err
 	}
@@ -234,27 +231,15 @@ func (s *ftpStorage) ReadFile(name string) ([]byte, error) {
 }
 
 func (s *ftpStorage) WriteFile(name string, data []byte) error {
-	client, err := s.c.newFTPClient()
-	if err != nil {
+	if err := s.c.ensureFTPDir(s.client); err != nil {
 		return err
 	}
-	defer client.Quit()
-
-	if err := s.c.ensureFTPDir(client); err != nil {
-		return err
-	}
-
-	return client.Stor(name, bytes.NewReader(data))
+	return s.client.Stor(name, bytes.NewReader(data))
 }
 
 func (s *ftpStorage) DeleteFile(name string) error {
-	client, err := s.c.newFTPClient()
-	if err != nil {
-		return err
-	}
-	defer client.Quit()
 	path := strings.TrimRight(s.remoteDir, "/") + "/" + name
-	return client.Delete(path)
+	return s.client.Delete(path)
 }
 
 func (s *ftpStorage) EncryptKey() []byte { return s.key }
@@ -264,7 +249,17 @@ func (c *ConfigManager) newFTPStorage() (RemoteStorage, int, error) {
 	if conf == nil {
 		return nil, 0, fmt.Errorf("FTP not configured")
 	}
-	return &ftpStorage{c: c, remoteDir: conf.RemoteDir, key: c.getFTPKey(), maxBackups: conf.MaxBackups}, conf.MaxBackups, nil
+	client, err := c.newFTPClient()
+	if err != nil {
+		return nil, 0, err
+	}
+	return &ftpStorage{
+		c:          c,
+		client:     client,
+		remoteDir:  conf.RemoteDir,
+		key:        c.getFTPKey(),
+		maxBackups: conf.MaxBackups,
+	}, conf.MaxBackups, nil
 }
 
 // BackupToFTP 备份到 FTP
@@ -272,6 +267,9 @@ func (c *ConfigManager) BackupToFTP() (map[string]interface{}, error) {
 	s, max, err := c.newFTPStorage()
 	if err != nil {
 		return nil, err
+	}
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
 	}
 	return c.backupConnections(s, max)
 }
@@ -282,6 +280,9 @@ func (c *ConfigManager) ListFTPBackups() ([]map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
+	}
 	return c.listBackupFiles(s)
 }
 
@@ -291,42 +292,19 @@ func (c *ConfigManager) SyncFromFTP() (map[string]interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
+	}
 	return c.syncFromProvider(s)
 }
 
 func (c *ConfigManager) RestoreFromFTPFile(filename string) (map[string]interface{}, error) {
-	filename = filepath.Base(filename) // 防止路径穿越
-	conf := c.GetFTPConfig()
-	if conf == nil {
-		return nil, fmt.Errorf("FTP not configured")
-	}
-	client, err := c.newFTPClient()
+	s, _, err := c.newFTPStorage()
 	if err != nil {
 		return nil, err
 	}
-	defer client.Quit()
-
-	remotePath := strings.TrimRight(conf.RemoteDir, "/") + "/" + filename
-	resp, err := client.Retr(remotePath)
-	if err != nil {
-		return nil, err
+	if cl, ok := s.(storageCloser); ok {
+		defer cl.Close()
 	}
-	defer resp.Close()
-
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(resp)
-	if err != nil {
-		return nil, err
-	}
-
-	key := c.getFTPKey()
-	snap, err := c.decryptAndParseSnapshot(buf.String(), key)
-	if err != nil {
-		return nil, err
-	}
-
-	c.restoreSnapshotToLocal(snap)
-	return map[string]interface{}{
-		"success": true,
-	}, nil
+	return restoreResult(c.restoreFromProvider(s, filename))
 }
