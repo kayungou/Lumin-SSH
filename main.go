@@ -4,6 +4,7 @@ import (
 	"context"
 	"embed"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/energye/systray"
@@ -23,15 +24,10 @@ func forceShowWindow(ctx context.Context) {
 	runtime.WindowShow(ctx)
 }
 
-func main() {
-	// 单实例检查（平台特定实现）
-	ensureSingleInstance()
+var systrayOnce sync.Once
 
-	// Create an instance of the app structure
-	app := NewApp()
-
-	// Setup systray
-	onReady := func() {
+func setupSystray(app *App) {
+	systrayOnce.Do(func() {
 		systray.SetIcon(icon)
 		systray.SetTitle("Lumin")
 		systray.SetTooltip("Lumin SSH")
@@ -39,11 +35,16 @@ func main() {
 		mShow := systray.AddMenuItem("显示主窗口", "Show Main Window")
 		mQuit := systray.AddMenuItem("完全退出", "Quit Lumin")
 
-		// Handle left click on the tray icon to show window
+		// 左键点击托盘图标：显示窗口
 		systray.SetOnClick(func(menu systray.IMenu) {
 			if app.ctx != nil {
 				forceShowWindow(app.ctx)
 			}
+		})
+
+		// 右键点击托盘图标：显示菜单
+		systray.SetOnRClick(func(menu systray.IMenu) {
+			menu.ShowMenu()
 		})
 
 		mShow.Click(func() {
@@ -57,6 +58,19 @@ func main() {
 			systray.Quit()
 			os.Exit(0)
 		})
+	})
+}
+
+func main() {
+	// 单实例检查（平台特定实现）
+	ensureSingleInstance()
+
+	// Create an instance of the app structure
+	app := NewApp()
+
+	// Setup systray
+	onReady := func() {
+		setupSystray(app)
 	}
 	onExit := func() {}
 
@@ -73,7 +87,9 @@ func main() {
 			Assets: assets,
 		},
 		BackgroundColour: &options.RGBA{R: 8, G: 12, B: 20, A: 255}, // #080c14
-		OnStartup:        app.startup,
+		OnStartup: func(ctx context.Context) {
+			app.startup(ctx)
+		},
 		// 拦截窗口关闭：弹出对话框让用户选择退出 / 系统托盘 / 取消
 		OnBeforeClose: func(ctx context.Context) bool {
 			if app.quitting.Load() {
