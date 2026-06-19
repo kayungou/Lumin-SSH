@@ -1744,7 +1744,16 @@ func (m *SSHManager) UploadFileContentBase64(sessionId string, fileName string, 
 	}
 	defer dst.Close()
 
-	_, err = dst.Write(content)
+	pr := &progressReader{
+		Reader:    bytes.NewReader(content),
+		ctx:       m.ctx,
+		sessionId: sessionId,
+		total:     int64(len(content)),
+		lastEmit:  time.Now(),
+	}
+
+	buf := make([]byte, 2*1024*1024)
+	_, err = io.CopyBuffer(dst, pr, buf)
 	return err
 }
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 const FileEditor = React.lazy(() => import('./FileEditor.jsx'));
+import { EventsOn } from '../../wailsjs/runtime/runtime.js';
 import { useTranslation, t as tKey, getLanguage } from '../i18n.js';
 
 // 格式化文件大小
@@ -419,15 +420,13 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
   }, [sessionId, currentPath, loadDir]);
 
   useEffect(() => {
-    const handleProgress = (e) => {
+    const off = EventsOn(`transfer-progress-${sessionId}`, (progress) => {
       setTransferInfo(prev => {
         if (!prev) return prev;
-        return { ...prev, progress: e.detail };
+        return { ...prev, progress };
       });
-    };
-    const eventName = `transfer-progress-${sessionId}`;
-    window.addEventListener(eventName, handleProgress);
-    return () => window.removeEventListener(eventName, handleProgress);
+    });
+    return off;
   }, [sessionId]);
 
   // Breadcrumb parts
