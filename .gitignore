@@ -6,6 +6,7 @@
 *.dylib
 test.exe
 luminssh-go.exe
+luminssh-go
 
 # Wails standard build outputs
 /build/bin/
