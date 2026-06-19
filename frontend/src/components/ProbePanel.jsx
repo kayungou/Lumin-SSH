@@ -28,11 +28,14 @@ const Sparkline = React.memo(function Sparkline({ data, color = '#22c55e', fill 
 });
 
 // ── Memory Donut ──────────────────────────────────────────────────────────
-const MemDonut = React.memo(function MemDonut({ used, cache, total }) {
+const MemDonut = React.memo(function MemDonut({ used, cache, free, total }) {
   const r = 27; const cx = 35; const cy = 35;
   const circ = 2 * Math.PI * r;
+  // 用 available 分割，保证三段 = 100%
+  // 红 = used (total - available), 灰 = available - free, 绿 = free
   const f1 = total > 0 ? Math.min(Math.max(used / total, 0), 1) : 0;
-  const f2 = total > 0 ? Math.min(Math.max(cache / total, 0), 1 - f1) : 0;
+  const reclaimable = total - used - free; // available - free
+  const f2 = total > 0 ? Math.min(Math.max(reclaimable / total, 0), 1 - f1) : 0;
   const f3 = Math.max(1 - f1 - f2, 0);
   const seg = (frac, color, start) => frac > 0.005 ? (
     <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={8}
@@ -398,7 +401,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
       <Card>
         <SectionHeader icon="💾" title={t('内存')} badge={fmem(info.memTotal)} />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <MemDonut used={info.memUsed} cache={info.memCache} total={info.memTotal} />
+          <MemDonut used={info.memUsed} cache={info.memCache} free={info.memFree} total={info.memTotal} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
             {[
               { dot: '#ef4444', label: t('已用'), val: fmem(info.memUsed) },
