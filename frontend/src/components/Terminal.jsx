@@ -609,8 +609,8 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
   useEffect(() => {
     if (isConnected) {
       setJustConnected(true);
-      const t = setTimeout(() => setJustConnected(false), 1400);
-      return () => clearTimeout(t);
+      const timer = setTimeout(() => setJustConnected(false), 1400);
+      return () => clearTimeout(timer);
     }
   }, [isConnected]);
 

@@ -221,7 +221,7 @@ export default function FileEditor({
     return () => document.removeEventListener('mousedown', handler);
   }, [contextMenu]);
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!activeFile || !isModified) return;
     setSaving(true);
     try {
@@ -235,7 +235,7 @@ export default function FileEditor({
     } finally {
       setSaving(false);
     }
-  };
+  }, [activeFile, isModified, currentContent, onSave]);
 
   // Ctrl+S 保存
   useEffect(() => {
@@ -666,7 +666,7 @@ export default function FileEditor({
         >
           {[
             { label: t('复制'), action: 'copy', shortcut: formatShortcut('Ctrl+C'), disabled: !contextMenu?.hasSelection },
-            { label: t('粘贴'), action: 'paste', shortcut: formatShortcut('Ctrl+C') },
+            { label: t('粘贴'), action: 'paste', shortcut: formatShortcut('Ctrl+V') },
             { label: t('剪切'), action: 'cut', shortcut: formatShortcut('Ctrl+X'), disabled: !contextMenu?.hasSelection },
             { label: t('全选'), action: 'selectAll', shortcut: formatShortcut('Ctrl+A') },
           ].map((item) => (

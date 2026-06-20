@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, useMemo, Suspense } from 'react';
 import { createPortal } from 'react-dom';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 const FileEditor = React.lazy(() => import('./FileEditor.jsx'));
@@ -343,7 +343,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
   const [sortDir, setSortDir] = useState('asc');  // asc, desc
 
   // 排序后的列表（目录在前）
-  const sortedItems = [...items].sort((a, b) => {
+  const sortedItems = useMemo(() => [...items].sort((a, b) => {
     // 目录始终在前
     if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
     let cmp = 0;
@@ -355,7 +355,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
       default: cmp = 0;
     }
     return sortDir === 'asc' ? cmp : -cmp;
-  });
+  }), [items, sortField, sortDir]);
 
   const handleSort = (field) => {
     if (sortField === field) {
@@ -421,7 +421,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
     } finally {
       setLoading(false);
     }
-  }, [sessionId, addToast]);
+  }, [sessionId, addToast, t]);
 
   // ── 初始化：依次尝试 CWD → /root → /，用第一个可访问的 ──
   useEffect(() => {

@@ -199,16 +199,17 @@ export default function App() {
     };
     applyTheme();
 
-    // 系统主题变化时自动跟随
-    const mq = window.matchMedia('(prefers-color-scheme: light)');
-    mq.addEventListener('change', applyTheme);
-    return () => mq.removeEventListener('change', applyTheme);
-
+    // 自定义强调色初始化
     const useCustomAccent = localStorage.getItem('useCustomAccent') === 'true';
     const themeAccent = localStorage.getItem('themeAccent');
     if (useCustomAccent && themeAccent) {
       document.documentElement.style.setProperty('--green', themeAccent);
     }
+
+    // 系统主题变化时自动跟随
+    const mq = window.matchMedia('(prefers-color-scheme: light)');
+    mq.addEventListener('change', applyTheme);
+    return () => mq.removeEventListener('change', applyTheme);
   }, []);
 
   // ── 自动检测更新机制 ────────────────────────────────────
@@ -470,7 +471,7 @@ export default function App() {
         addToast(`${t('重新连接失败')}: ${err}`, 'error', 5000);
       }
     }
-  }, [servers, addToast]);
+  }, [servers, addToast, t]);
 
   // ── 监听 SSH 意外断开事件 ────────────────────────────────────
   useEffect(() => {
@@ -778,7 +779,7 @@ export default function App() {
       }
       // 主机密钥变更或认证失败时，保持 connectingServer 和 connecting 状态，等待弹窗确认
     }
-  }, [addToast]);
+  }, [addToast, t]);
 
   // ── Close session ──────────────────────────────────────────
   const closeSession = useCallback(async (sessionId, e) => {
@@ -788,8 +789,8 @@ export default function App() {
     if (!(await window.luminDialog?.confirm(`${t('确定关闭连接')}「${name}」？`))) return;
     // 后端断开（不等待，即使服务器无响应也不阻塞 UI）
     if (session?.terminals) {
-      for (const t of session.terminals) {
-        AppGo.DisconnectSSH(t.id).catch(() => {});
+      for (const term of session.terminals) {
+        AppGo.DisconnectSSH(term.id).catch(() => {});
       }
     } else {
       AppGo.DisconnectSSH(sessionId).catch(() => {});
@@ -1313,12 +1314,12 @@ export default function App() {
                 borderBottom: '1px solid var(--border)',
                 flexShrink: 0,
               }}>
-                {activeSession.terminals.map((t, idx) => (
+                {activeSession.terminals.map((term, idx) => (
                   <div
-                    key={t.id}
-                    className={`terminal-sub-tab ${activeTerminalId === t.id ? 'active' : ''}`}
-                    onClick={() => { setActiveTerminalId(t.id); setContentTab('terminal'); lastTerminalRef.current[activeSession.id] = t.id; }}
-                    title={t.label}
+                    key={term.id}
+                    className={`terminal-sub-tab ${activeTerminalId === term.id ? 'active' : ''}`}
+                    onClick={() => { setActiveTerminalId(term.id); setContentTab('terminal'); lastTerminalRef.current[activeSession.id] = term.id; }}
+                    title={term.label}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 4,
                       padding: '2px 10px',
@@ -1326,19 +1327,19 @@ export default function App() {
                       borderRadius: '4px 4px 0 0',
                       cursor: 'pointer',
                       userSelect: 'none',
-                      background: activeTerminalId === t.id ? 'var(--bg-3)' : 'transparent',
-                      color: activeTerminalId === t.id ? 'var(--text-1)' : 'var(--text-3)',
-                      border: activeTerminalId === t.id ? '1px solid var(--border)' : '1px solid transparent',
-                      borderBottom: activeTerminalId === t.id ? '1px solid var(--bg-3)' : '1px solid transparent',
+                      background: activeTerminalId === term.id ? 'var(--bg-3)' : 'transparent',
+                      color: activeTerminalId === term.id ? 'var(--text-1)' : 'var(--text-3)',
+                      border: activeTerminalId === term.id ? '1px solid var(--border)' : '1px solid transparent',
+                      borderBottom: activeTerminalId === term.id ? '1px solid var(--bg-3)' : '1px solid transparent',
                       transition: 'all 0.15s',
                     }}
                   >
                     <span style={{ fontSize: 11 }}>🖥</span>
-                    <span>{t.label}</span>
+                    <span>{term.label}</span>
                     {activeSession.terminals.length > 1 && (
                       <span
                         className="terminal-sub-tab-close"
-                        onClick={(e) => closeTerminal(activeSession.id, t.id, e)}
+                        onClick={(e) => closeTerminal(activeSession.id, term.id, e)}
                         style={{
                           marginLeft: 4, fontSize: 10, opacity: 0.5,
                           cursor: 'pointer', lineHeight: 1,

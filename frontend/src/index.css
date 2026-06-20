@@ -856,7 +856,7 @@ a { color: var(--blue); text-decoration: none; }
   transition: border-color 0.15s;
 }
 .path-input:focus {
-  border-color: var(--accent);
+  border-color: var(--border-focus);
 }
 
 .breadcrumb {
@@ -1182,7 +1182,7 @@ a { color: var(--blue); text-decoration: none; }
    ============================================================ */
 .dashboard-container {
   display: flex;
-  height: calc(100vh - 50px);
+  height: calc(100vh - 64px);
   width: 100%;
   overflow: hidden;
   background: var(--bg-1);
@@ -1477,11 +1477,6 @@ a { color: var(--blue); text-decoration: none; }
   40%  { transform: translateX(0%)    scaleX(1);   width: 80%; }
   70%  { transform: translateX(60%)   scaleX(0.7); width: 60%; }
   100% { transform: translateX(200%)  scaleX(0.4); width: 40%; }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
 }
 
 /* ── 分屏调整大小分割线样式 (Glassmorphism & High-end Glow) ────────────────────── */

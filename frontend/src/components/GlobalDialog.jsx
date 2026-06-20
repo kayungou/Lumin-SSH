@@ -10,13 +10,16 @@ export default function GlobalDialog() {
     window.luminDialog = {
       alert: (message, title = t('提示')) => {
         return new Promise((resolve) => {
-          setDialogs(prev => [...prev, {
-            id: Date.now() + Math.random(),
-            type: 'alert',
-            title,
-            message,
-            onClose: () => resolve()
-          }]);
+          setDialogs(prev => {
+            if (prev.some(d => d.type === 'alert' && d.message === message)) return prev;
+            return [...prev, {
+              id: Date.now() + Math.random(),
+              type: 'alert',
+              title,
+              message,
+              onClose: () => resolve()
+            }];
+          });
         });
       },
       confirm: (message, title = t('操作确认')) => {
@@ -37,16 +40,19 @@ export default function GlobalDialog() {
       },
       prompt: (message, defaultValue = '', title = t('输入信息'), checkboxLabel = '') => {
         return new Promise((resolve) => {
-          setDialogs(prev => [...prev, {
-            id: Date.now() + Math.random(),
-            type: 'prompt',
-            title,
-            message,
-            defaultValue,
-            checkboxLabel,
-            onConfirm: (val, checked) => resolve(checkboxLabel ? { value: val, checked } : val),
-            onCancel: () => resolve(null)
-          }]);
+          setDialogs(prev => {
+            if (prev.some(d => d.type === 'prompt' && d.message === message)) return prev;
+            return [...prev, {
+              id: Date.now() + Math.random(),
+              type: 'prompt',
+              title,
+              message,
+              defaultValue,
+              checkboxLabel,
+              onConfirm: (val, checked) => resolve(checkboxLabel ? { value: val, checked } : val),
+              onCancel: () => resolve(null)
+            }];
+          });
         });
       },
       choice: (message, title, buttons) => {
