@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useEffect, useLayoutEffect, useCallback, useRef, Suspense } from 'react';
+import { createPortal } from 'react-dom';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 const FileEditor = React.lazy(() => import('./FileEditor.jsx'));
 import { EventsOn } from '../../wailsjs/runtime/runtime.js';
@@ -248,6 +249,26 @@ function ChmodDialog({ path, permission, mode, onSave, onClose, t }) {
 // Context menu component
 function ContextMenu({ pos, item, onClose, onDownload, onEdit, onRename, onDelete, onMkdir, onNewFile, onCompress, onUncompress, onChmod, t }) {
   const ref = useRef(null);
+  const [adjusted, setAdjusted] = useState({ left: pos.x, top: pos.y });
+
+  useLayoutEffect(() => {
+    if (!ref.current) return;
+    const el = ref.current;
+    const rect = el.getBoundingClientRect();
+    let left = pos.x;
+    let top = pos.y;
+    // 右侧超出则左移
+    if (left + rect.width > window.innerWidth - 8) {
+      left = window.innerWidth - rect.width - 8;
+    }
+    // 底部超出则上移
+    if (top + rect.height > window.innerHeight - 8) {
+      top = pos.y - rect.height;
+      if (top < 8) top = 8;
+    }
+    setAdjusted({ left, top });
+  }, [pos.x, pos.y]);
+
   useEffect(() => {
     const handler = (e) => {
       if (ref.current && !ref.current.contains(e.target)) onClose();
@@ -260,7 +281,7 @@ function ContextMenu({ pos, item, onClose, onDownload, onEdit, onRename, onDelet
     <div
       ref={ref}
       className="context-menu"
-      style={{ left: Math.min(pos.x, window.innerWidth - 180), top: Math.min(pos.y, window.innerHeight - 200) }}
+      style={{ left: adjusted.left, top: adjusted.top }}
     >
       {item && !item.isDirectory && isEditable(item.name) && (
         <div className="context-menu-item" onClick={onEdit}>
@@ -292,7 +313,7 @@ function ContextMenu({ pos, item, onClose, onDownload, onEdit, onRename, onDelet
           <span>🔐</span> {t('修改权限')}
         </div>
       )}
-      <div className="context-menu-divider" />
+      {item && <div className="context-menu-divider" />}
       {!item && (
         <div className="context-menu-item" onClick={onNewFile}>
           <span>📄</span> {t('新建文件')}
@@ -316,7 +337,34 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
   const { t } = useTranslation();
   const joinPath = (base, name) => base === '/' ? `/${name}` : `${base}/${name}`;
   const [currentPath, setCurrentPath] = useState('/');
+  const [editingPath, setEditingPath] = useState(null);
   const [items, setItems] = useState([]);
+  const [sortField, setSortField] = useState('name');  // name, size, permissions, modified
+  const [sortDir, setSortDir] = useState('asc');  // asc, desc
+
+  // 排序后的列表（目录在前）
+  const sortedItems = [...items].sort((a, b) => {
+    // 目录始终在前
+    if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
+    let cmp = 0;
+    switch (sortField) {
+      case 'name': cmp = a.name.localeCompare(b.name); break;
+      case 'size': cmp = (a.size || 0) - (b.size || 0); break;
+      case 'permissions': cmp = (a.permission || '').localeCompare(b.permission || ''); break;
+      case 'modified': cmp = new Date(a.modifyTime || 0) - new Date(b.modifyTime || 0); break;
+      default: cmp = 0;
+    }
+    return sortDir === 'asc' ? cmp : -cmp;
+  });
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir('asc');
+    }
+  };
   const [loading, setLoading] = useState(false);
   const [contextMenu, setContextMenu] = useState(null); // { pos, item }
   const [renamingItem, setRenamingItem] = useState(null);
@@ -492,7 +540,8 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
 
     // 如果文件已在打开列表中，直接激活
     if (openEditFiles.some(f => f.path === remotePath)) {
-      setActiveEditPath(remotePath);
+      setActiveEditPath(null);
+      setTimeout(() => setActiveEditPath(remotePath), 0);
       return;
     }
 
@@ -856,33 +905,45 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
     >
       {/* Toolbar */}
       <div className="file-toolbar">
-        {/* Breadcrumb */}
-        <div className="breadcrumb">
-          {pathParts.map((part, i) => (
-            <span key={part.path} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              {i > 0 && <span className="breadcrumb-sep">/</span>}
-              <span
-                className={`breadcrumb-item ${i === pathParts.length - 1 ? 'current' : ''}`}
-                onClick={() => i < pathParts.length - 1 && loadDir(part.path)}
-              >
-                {part.label}
-              </span>
-            </span>
-          ))}
-        </div>
+        {/* Editable path input */}
+        <input
+          className="path-input"
+          type="text"
+          value={editingPath !== null ? editingPath : currentPath}
+          onChange={(e) => setEditingPath(e.target.value)}
+          onFocus={() => setEditingPath(currentPath)}
+          onBlur={() => {
+            if (editingPath !== null) {
+              const p = editingPath.trim();
+              if (p && p !== currentPath) loadDir(p.startsWith('/') ? p : '/' + p);
+              setEditingPath(null);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.target.blur();
+            } else if (e.key === 'Escape') {
+              setEditingPath(null);
+              e.target.blur();
+            }
+          }}
+          style={{ flex: 1, minWidth: 0 }}
+        />
 
-        <button className="btn btn-secondary btn-sm" onClick={handleNewFile}>📄 {t('新建文件')}</button>
-        <button className="btn btn-secondary btn-sm" onClick={handleMkdir}>📁 {t('新建文件夹')}</button>
-        <button className="btn btn-secondary btn-sm" onClick={handleUpload}>
-          ⬆ {t('上传文件')}
-        </button>
-        <button
-          className="btn btn-ghost btn-sm btn-icon"
-          title={t('刷新')}
-          onClick={() => loadDir(currentPath)}
-        >
-          ↻
-        </button>
+        <div className="file-toolbar-actions">
+          <button className="btn btn-secondary btn-sm" onClick={handleNewFile}>📄 {t('新建文件')}</button>
+          <button className="btn btn-secondary btn-sm" onClick={handleMkdir}>📁 {t('新建文件夹')}</button>
+          <button className="btn btn-secondary btn-sm" onClick={handleUpload}>
+            ⬆ {t('上传文件')}
+          </button>
+          <button
+            className="btn btn-ghost btn-sm btn-icon"
+            title={t('刷新')}
+            onClick={() => loadDir(currentPath)}
+          >
+            ↻
+          </button>
+        </div>
       </div>
 
       {/* Content area: file list + optional split editor */}
@@ -890,10 +951,18 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
         {/* File List */}
         <div className="file-list" style={{ flex: 1, minWidth: 0 }}>
           <div className="file-list-header">
-            <span>{t('名称')}</span>
-            <span>{t('大小')}</span>
-            <span>{t('权限')}</span>
-            <span>{t('修改时间')}</span>
+            <span onClick={() => handleSort('name')} style={{ cursor: 'pointer' }}>
+              {t('名称')} {sortField === 'name' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+            </span>
+            <span onClick={() => handleSort('size')} style={{ cursor: 'pointer' }}>
+              {t('大小')} {sortField === 'size' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+            </span>
+            <span onClick={() => handleSort('permissions')} style={{ cursor: 'pointer' }}>
+              {t('权限')} {sortField === 'permissions' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+            </span>
+            <span onClick={() => handleSort('modified')} style={{ cursor: 'pointer' }}>
+              {t('修改时间')} {sortField === 'modified' ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+            </span>
             <span></span>
           </div>
 
@@ -931,7 +1000,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
             </div>
           )}
 
-          {!loading && items.map((item) => {
+          {!loading && sortedItems.map((item) => {
             const isRenaming = renamingItem?.name === item.name;
 
             return (
@@ -1014,7 +1083,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
       )}
 
       {/* Context Menu */}
-      {contextMenu && (
+      {contextMenu && createPortal(
         <ContextMenu
           pos={contextMenu.pos}
           item={contextMenu.item}
@@ -1029,7 +1098,8 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
           onNewFile={() => { handleNewFile(); closeContextMenu(); }}
           onCompress={() => { handleCompress(contextMenu.item); closeContextMenu(); }}
           onUncompress={() => { handleUncompress(contextMenu.item); closeContextMenu(); }}
-        />
+        />,
+        document.body
       )}
 
       {/* Transfer Progress Toast */}

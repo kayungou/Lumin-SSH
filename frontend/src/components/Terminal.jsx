@@ -674,7 +674,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
       const rect = historyBtnRef.current?.getBoundingClientRect();
       if (rect) {
         setHistoryPopupPos({
-          left: Math.min(rect.right - 480, window.innerWidth - 490),
+          left: Math.max(8, Math.min(rect.right - 480, window.innerWidth - 490)),
           bottom: window.innerHeight - rect.top + 4,
         });
       }
@@ -691,7 +691,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
       const rect = commandsBtnRef.current?.getBoundingClientRect();
       if (rect) {
         setCommandsPopupPos({
-          left: Math.min(rect.right - 680, window.innerWidth - 690),
+          left: Math.max(8, Math.min(rect.right - 680, window.innerWidth - 690)),
           bottom: window.innerHeight - rect.top + 4,
         });
       }

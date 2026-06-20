@@ -1364,7 +1364,7 @@ export default function App() {
               {/* 左侧/上侧主体容器 */}
               <div id="session-editor-container" style={{ flex: 1, display: 'flex', flexDirection: fileManagerPosition === 'bottom' ? 'column' : 'row', height: '100%', position: 'relative', overflow: 'hidden' }}>
                 {/* 主体视口 */}
-                <div style={{ flex: 1, position: 'relative', overflow: 'hidden', order: 1 }}>
+                <div id="editor-main-content" style={{ flex: 1, position: 'relative', overflow: 'hidden', order: 1 }}>
                   {sessions.map((s) => (
                     <div
                       key={s.id}
@@ -1487,6 +1487,41 @@ export default function App() {
                 ))}
               </div>
               {/* 文件编辑器分栏 host（由 FileEditor 通过 Portal 渲染） */}
+              <div
+                className="split-resizer-v"
+                style={{ display: 'none', order: 1 }}
+                id="editor-split-resizer"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  const host = document.getElementById('editor-split-host');
+                  if (!host) return;
+                  const container = document.getElementById('session-editor-container');
+                  const rect = container.getBoundingClientRect();
+                  const startX = e.clientX;
+                  const startW = host.getBoundingClientRect().width;
+                  const splitPos = host.style.order === '0' ? 'left' : 'right';
+                  const onMove = (ev) => {
+                    const dx = ev.clientX - startX;
+                    const newW = splitPos === 'right'
+                      ? Math.max(200, Math.min(rect.width - 200, startW - dx))
+                      : Math.max(200, Math.min(rect.width - 200, startW + dx));
+                    host.style.width = newW + 'px';
+                    host.style.transition = 'none';
+                    window.dispatchEvent(new Event('resize'));
+                  };
+                  const onUp = () => {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    document.body.style.cursor = '';
+                    document.body.style.userSelect = '';
+                    host.style.transition = '';
+                  };
+                  document.addEventListener('mousemove', onMove);
+                  document.addEventListener('mouseup', onUp);
+                  document.body.style.cursor = 'col-resize';
+                  document.body.style.userSelect = 'none';
+                }}
+              />
               <div id="editor-split-host" style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', order: 2, width: 0, transition: 'width 0.2s ease, height 0.2s ease' }} />
             </div>
 

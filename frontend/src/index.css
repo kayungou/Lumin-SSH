@@ -149,7 +149,7 @@ a { color: var(--blue); text-decoration: none; }
   --wails-draggable: drag;
   flex-shrink: 0;
   position: relative;
-  z-index: 2000;
+  z-index: 10000;
 }
 
 .topbar-content {
@@ -827,10 +827,36 @@ a { color: var(--blue); text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 10px 16px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-1);
   flex-shrink: 0;
+  flex-wrap: wrap;
+  min-height: 0;
+}
+.file-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.path-input {
+  flex: 1;
+  min-width: 0;
+  height: 28px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-2);
+  color: var(--text-1);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.path-input:focus {
+  border-color: var(--accent);
 }
 
 .breadcrumb {
