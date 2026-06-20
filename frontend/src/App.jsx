@@ -1552,12 +1552,14 @@ export default function App() {
       <Toast toasts={toasts} />
       <GlobalDialog />
 
-      {/* ── 连接进度卡片 ──────────────────────────────── */}
-      <ConnectingCard
-        connectingServer={connectingServer}
-        t={t}
-        onCancel={handleCancelConnection}
-      />
+      {/* ── 连接进度卡片（仅当连接中的会话是当前激活会话时才显示） ── */}
+      {connectingServer && connectingServer.sessionId === activeSessionId && (
+        <ConnectingCard
+          connectingServer={connectingServer}
+          t={t}
+          onCancel={handleCancelConnection}
+        />
+      )}
 
       {/* ── 托盘弹窗面板 ─────────────────────────────── */}
       <TrayPanel
