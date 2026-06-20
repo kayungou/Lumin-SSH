@@ -237,6 +237,18 @@ export default function FileEditor({
     }
   };
 
+  // Ctrl+S 保存
+  useEffect(() => {
+    const handler = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        if (isModified && !saving) handleSave();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [isModified, saving, handleSave]);
+
   const closeFileWithConfirm = async (path) => {
     const f = files.find((x) => x.path === path);
     const edited = editedContents[path];

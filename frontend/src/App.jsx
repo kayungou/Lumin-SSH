@@ -38,6 +38,8 @@ export default function App() {
   const [showTrayPanel, setShowTrayPanel] = useState(false);
   const [showProbe, setShowProbe] = useState(false); // 探针面板 toggle
   const [connectingServer, setConnectingServer] = useState(null); // { server, sessionId, startTime }
+  const connectingServerRef = useRef(connectingServer);
+  useEffect(() => { connectingServerRef.current = connectingServer; }, [connectingServer]);
   const [toasts, setToasts] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [monitoringEnabled, setMonitoringEnabled] = useState({}); // { [sessionId]: boolean }
@@ -782,7 +784,7 @@ export default function App() {
   const closeSession = useCallback(async (sessionId, e) => {
     e?.stopPropagation();
     const session = sessionsRef.current.find(s => s.id === sessionId);
-    const name = session?.name || session?.host || sessionId;
+    const name = session?.serverName || session?.name || session?.host || sessionId;
     if (!(await window.luminDialog?.confirm(`${t('确定关闭连接')}「${name}」？`))) return;
     // 后端断开（不等待，即使服务器无响应也不阻塞 UI）
     if (session?.terminals) {
@@ -806,6 +808,10 @@ export default function App() {
         setActiveSessionId(null);
         setActiveTerminalId(null);
       }
+    }
+    // 如果正在连接中，也取消连接卡片
+    if (connectingServerRef.current?.sessionId === sessionId) {
+      setConnectingServer(null);
     }
   }, [activeSessionId]);
 
@@ -1611,7 +1617,14 @@ export default function App() {
                     background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
                     color: '#8b949e',
                   }}
-                  onClick={() => setConnectingServer(null)}
+                  onClick={() => {
+                    // 实际断开连接
+                    AppGo.DisconnectSSH(connectingServer.sessionId).catch(() => {});
+                    setSessions(prev => prev.filter(s => s.id !== connectingServer.sessionId));
+                    setActiveSessionId(null);
+                    setActiveTerminalId(null);
+                    setConnectingServer(null);
+                  }}
                 >
                   {t('取消')}
                 </button>

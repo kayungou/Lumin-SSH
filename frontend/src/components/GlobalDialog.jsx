@@ -21,14 +21,18 @@ export default function GlobalDialog() {
       },
       confirm: (message, title = t('操作确认')) => {
         return new Promise((resolve) => {
-          setDialogs(prev => [...prev, {
-            id: Date.now() + Math.random(),
-            type: 'confirm',
-            title,
-            message,
-            onConfirm: () => resolve(true),
-            onCancel: () => resolve(false)
-          }]);
+          setDialogs(prev => {
+            // 防止重复弹窗
+            if (prev.some(d => d.type === 'confirm' && d.message === message)) return prev;
+            return [...prev, {
+              id: Date.now() + Math.random(),
+              type: 'confirm',
+              title,
+              message,
+              onConfirm: () => resolve(true),
+              onCancel: () => resolve(false)
+            }];
+          });
         });
       },
       prompt: (message, defaultValue = '', title = t('输入信息'), checkboxLabel = '') => {
