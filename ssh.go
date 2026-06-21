@@ -58,6 +58,7 @@ type SSHManager struct {
 	clients          map[string]*sshClientEntry    // connKey -> shared client+SFTP
 	connTerminals    map[string][]string           // connKey -> terminal sessionIds
 	probeDeployed    map[string]bool               // connKey -> probe.sh deployed
+	probeFailed      map[string]int                // connKey -> probe.sh deploy fail count (max 3)
 	pendingHostKeys  map[string]*PendingHostKey    // sessionId -> pending host key info
 	tempAcceptedKeys map[string]string             // sessionId -> fingerprint (accept this time only)
 	pendingCancels   map[string]context.CancelFunc // sessionId -> cancel func for in-progress Connect
@@ -79,6 +80,7 @@ func NewSSHManager() *SSHManager {
 		clients:          make(map[string]*sshClientEntry),
 		connTerminals:    make(map[string][]string),
 		probeDeployed:    make(map[string]bool),
+		probeFailed:      make(map[string]int),
 		pendingHostKeys:  make(map[string]*PendingHostKey),
 		tempAcceptedKeys: make(map[string]string),
 		pendingCancels:   make(map[string]context.CancelFunc),
@@ -387,6 +389,7 @@ func (m *SSHManager) Connect(sessionId string, conn Connection) error {
 					delete(m.clients, connKey)
 					delete(m.connTerminals, connKey)
 					delete(m.probeDeployed, connKey)
+					delete(m.probeFailed, connKey)
 				}
 				m.mu.Unlock()
 
@@ -625,6 +628,7 @@ func (m *SSHManager) Disconnect(sessionId string) {
 			delete(m.clients, connKey)
 			delete(m.connTerminals, connKey)
 			delete(m.probeDeployed, connKey)
+			delete(m.probeFailed, connKey)
 		}
 	}
 	m.mu.Unlock() // 尽早释放锁，避免 Close 阻塞影响其他操作
@@ -970,9 +974,13 @@ func (m *SSHManager) deployProbeScript(sftpClient *sftp.Client, connKey string) 
 	}
 	m.mu.RLock()
 	already := m.probeDeployed[connKey]
+	failCount := m.probeFailed[connKey]
 	m.mu.RUnlock()
 	if already {
 		return nil
+	}
+	if failCount >= 3 {
+		return fmt.Errorf("probe deploy failed %d times, giving up", failCount)
 	}
 
 	if err := sftpClient.MkdirAll(".lumin"); err != nil {
@@ -985,12 +993,18 @@ func (m *SSHManager) deployProbeScript(sftpClient *sftp.Client, connKey string) 
 		scriptPath = "/tmp/.lumin/probe.sh"
 		f, err = sftpClient.Create(scriptPath)
 		if err != nil {
+			m.mu.Lock()
+			m.probeFailed[connKey]++
+			m.mu.Unlock()
 			return fmt.Errorf("cannot write probe script: %w", err)
 		}
 	}
 	_, err = f.Write([]byte(dynamicProbeScript))
 	f.Close()
 	if err != nil {
+		m.mu.Lock()
+		m.probeFailed[connKey]++
+		m.mu.Unlock()
 		return err
 	}
 
@@ -1046,10 +1060,16 @@ func (m *SSHManager) GetSystemInfo(sessionId string) (result map[string]interfac
 	connKey := s.ConnKey
 	m.mu.RUnlock()
 
-	_ = m.deployProbeScript(sftpClient, connKey)
+	if err := m.deployProbeScript(sftpClient, connKey); err != nil {
+		return nil, fmt.Errorf("probe script deploy failed: %w", err)
+	}
 
 	out, err := m.executeCmdWithClient(client, `sh -c 'f=~/.lumin/probe.sh; [ -f "$f" ] && sh "$f" || sh /tmp/.lumin/probe.sh'`)
 	if err != nil || len(strings.TrimSpace(out)) == 0 {
+		// 执行失败（文件被删除或不可用），清除标记以便下次重新部署
+		m.mu.Lock()
+		delete(m.probeDeployed, connKey)
+		m.mu.Unlock()
 		return nil, fmt.Errorf("probe script execution failed")
 	}
 
@@ -1418,7 +1438,7 @@ func (m *SSHManager) GetServerStaticInfo(sessionId string) (result map[string]in
 	}
 
 	out, err := m.executeCmdWithClient(client, `echo ---OS---
-grep PRETTY_NAME /etc/os-release 2>/dev/null || echo 'PRETTY_NAME="Linux"'
+grep PRETTY_NAME /etc/os-release 2>/dev/null || cat /etc/redhat-release 2>/dev/null || cat /etc/issue 2>/dev/null | head -1 || uname -s -r
 grep ^VERSION_ID= /etc/os-release 2>/dev/null
 echo ---TZ---
 cat /etc/timezone 2>/dev/null || date +'%Z'
@@ -1436,8 +1456,18 @@ ip route get 1.1.1.1 2>/dev/null | grep -oE 'src [0-9.]+' | awk '{print $2}' || 
 
 	osName := "Linux"
 	for _, l := range extractSection(lines, "---OS---", "---TZ---") {
-		if strings.HasPrefix(l, "PRETTY_NAME=") {
-			osName = strings.Trim(strings.TrimPrefix(l, "PRETTY_NAME="), "\"")
+		t := strings.TrimSpace(l)
+		if t == "" {
+			continue
+		}
+		if strings.HasPrefix(t, "PRETTY_NAME=") {
+			osName = strings.Trim(strings.TrimPrefix(t, "PRETTY_NAME="), "\"")
+			break
+		}
+		// /etc/redhat-release, /etc/issue, uname 等返回的纯文本
+		if !strings.HasPrefix(t, "VERSION_ID=") {
+			osName = t
+			break
 		}
 	}
 	tzStr := "UTC"

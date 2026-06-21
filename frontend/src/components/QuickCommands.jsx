@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { Folder, FolderPlus, Zap, Save, Pencil, Trash2, Rocket, SquarePen } from 'lucide-react';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 import { useTranslation } from '../i18n.js';
 import { getModKey } from '../utils/platform.js';
@@ -158,7 +159,7 @@ function TreeNode({ item, index, path, selectedPath, onSelect, contextMenu, onCo
               {isExpanded ? '▼' : '▶'}
             </span>
             <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>
-              📁 {item.name}
+              <Folder size={14} style={{ flexShrink: 0 }} /> {item.name}
             </span>
             {arrowBtn(-1)}
             {arrowBtn(1)}
@@ -846,7 +847,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
         <button
           onClick={() => { closeContextMenu(); setDialog({ type: 'addGroup', contextPath: '', parentList: commands }); setDlgName(''); setDlgCmd(''); setDlgAddCR(true); }}
           style={{ background: 'rgba(88,166,255,0.1)', border: '1px solid rgba(88,166,255,0.25)', color: '#58a6ff', borderRadius: 3, padding: '3px 8px', fontSize: 12, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}
-        >{t('📁 添加分组')}</button>
+        ><FolderPlus size={14} /> {t('添加分组')}</button>
         <div style={{ flex: 1 }} />
         <span style={{ fontSize: 10, color: '#6e7681' }}>{t('Ctrl+S 保存')}</span>
       </div>
@@ -947,7 +948,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
                     save(list);
                   }}
                   style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.25)', color: '#22c55e', borderRadius: 3, padding: '3px 10px', fontSize: 11, cursor: 'pointer' }}
-                >{t('💾 保存名称')}</button>
+                ><Save size={13} /> {t('保存名称')}</button>
                 <button
                   onClick={() => {
                     const list = structuredClone(commands);
@@ -1020,7 +1021,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
                 {/* 参数预览 */}
                 {extractParams(editCmdText).length > 0 && (
                   <div style={{ marginTop: 6, fontSize: 11, color: '#d29922', display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span>⚡</span>
+                    <Zap size={12} />
                     {t('含')} {extractParams(editCmdText).length} {t('个动态参数：')} {extractParams(editCmdText).map(p => `[p#${p.num}${p.label ? ' ' + p.label : ''}]`).join(', ')}
                   </div>
                 )}
@@ -1231,14 +1232,14 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
                       color: '#22c55e', borderRadius: 3, padding: '4px 14px', fontSize: 12, cursor: 'pointer',
                       display: 'flex', alignItems: 'center', gap: 4,
                     }}
-                  >{t('🚀 发送')}</button>
+                  ><Rocket size={14} /> {t('发送')}</button>
                 </div>
               </div>
             </div>
           ) : (
             /* 未选中任何项 */
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6e7681', fontSize: 13, flexDirection: 'column', gap: 8 }}>
-              <div style={{ fontSize: 36, opacity: 0.2 }}>⚡</div>
+              <div style={{ opacity: 0.2 }}><Zap size={40} /></div>
               <div>{t('选择左侧命令或添加新命令')}</div>
             </div>
           )}
@@ -1291,7 +1292,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
             borderRadius: 3, padding: '3px 12px', fontSize: 11, cursor: quickCmd.trim() ? 'pointer' : 'default',
             transition: 'all 0.15s',
           }}
-        >{t('🚀 发送')}</button>
+        ><Rocket size={14} /> {t('发送')}</button>
       </div>
 
       {/* ── 右键上下文菜单 ── */}
@@ -1307,18 +1308,18 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
             {contextMenu.type === 'group' ? (
               <>
                 <div onClick={() => doContextAction('addCmd')} style={menuItemStyle}>{t('＋ 添加命令')}</div>
-                <div onClick={() => doContextAction('addGroup')} style={menuItemStyle}>{t('📁 添加子分组')}</div>
+                <div onClick={() => doContextAction('addGroup')} style={menuItemStyle}><FolderPlus size={14} /> {t('添加子分组')}</div>
                 <div style={menuSepStyle} />
-                <div onClick={() => doContextAction('editGroup')} style={menuItemStyle}>{t('✏️ 重命名分组')}</div>
+                <div onClick={() => doContextAction('editGroup')} style={menuItemStyle}><Pencil size={14} /> {t('重命名分组')}</div>
                 <div style={menuSepStyle} />
-                <div onClick={() => doContextAction('delete')} style={{ ...menuItemStyle, color: '#ff7b72' }}>{t('🗑️ 删除分组')}</div>
+                <div onClick={() => doContextAction('delete')} style={{ ...menuItemStyle, color: '#ff7b72' }}><Trash2 size={14} /> {t('删除分组')}</div>
               </>
             ) : (
               <>
-                <div onClick={() => doContextAction('execute')} style={menuItemStyle}>{t('🚀 执行')}</div>
-                <div onClick={() => doContextAction('edit')} style={menuItemStyle}>{t('✏️ 编辑')}</div>
+                <div onClick={() => doContextAction('execute')} style={menuItemStyle}><Rocket size={14} /> {t('执行')}</div>
+                <div onClick={() => doContextAction('edit')} style={menuItemStyle}><SquarePen size={14} /> {t('编辑')}</div>
                 <div style={menuSepStyle} />
-                <div onClick={() => doContextAction('delete')} style={{ ...menuItemStyle, color: '#ff7b72' }}>{t('🗑️ 删除')}</div>
+                <div onClick={() => doContextAction('delete')} style={{ ...menuItemStyle, color: '#ff7b72' }}><Trash2 size={14} /> {t('删除')}</div>
               </>
             )}
           </div>
@@ -1522,7 +1523,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
                   }}
                   onMouseEnter={e => e.currentTarget.style.background = 'rgba(88,166,255,0.08)'}
                   onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                >{t('📁 根目录')}</div>
+                ><Folder size={14} /> {t('根目录')}</div>
                 {/* 所有分组 */}
                 {(() => {
                   const groups = collectGroups(commands);
@@ -1549,7 +1550,7 @@ const QuickCommands = forwardRef(function QuickCommands({ sessionId, addToast, c
                       }}
                       onMouseEnter={e => e.currentTarget.style.background = 'rgba(88,166,255,0.08)'}
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
-                    >{t('📁')} {g.name}</div>
+                    ><Folder size={14} /> {g.name}</div>
                   ));
                 })()}
               </div>

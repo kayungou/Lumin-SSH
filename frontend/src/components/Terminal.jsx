@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { Terminal as XTerm } from '@xterm/xterm';
 import { FitAddon } from '@xterm/addon-fit';
-import { Copy, Clipboard, Trash2, CheckSquare, Play, Clock, X } from 'lucide-react';
+import { Copy, Clipboard, Trash2, CheckSquare, Play, Clock, X, Zap } from 'lucide-react';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 import { getModKey, formatShortcut } from '../utils/platform.js';
 import QuickCommands from './QuickCommands.jsx';
@@ -150,6 +150,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
       allowTransparency: true,
       fastScrollModifier: 'alt',
       macOptionIsMeta:  true,
+      padding:          8,
       windowOptions: {
         setWinSizeChars: true
       }
@@ -849,7 +850,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         style={{
           flex: 1,
           minHeight: 0,
-          padding: '8px 4px 6px 12px',
+          padding: '0',
           background: 'transparent',
         }}
       />
@@ -928,13 +929,13 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             transition: 'all 0.15s',
           }}
         >
-          <span>⚡</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}><Zap size={13} /></span>
           <span>{t('命令')}</span>
         </button>
 
         {/* 执行按钮（绿色） */}
         <button
-          onClick={executeCommand}
+          onClick={() => executeCommand()}
           disabled={!cmdTrimmed || !isConnected}
           title={t('执行')}
           style={{

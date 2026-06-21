@@ -5,7 +5,11 @@ import { getModKey } from '../utils/platform.js';
 import logoImg from '../assets/logo.png';
 import { APP_VERSION } from '../config.js';
 import { useUpdateChecker } from '../hooks/useUpdateChecker.js';
+import { Sun, Monitor, Moon, Keyboard, Cloud, Info, Database, Folder, FolderOpen, Save, X, Lightbulb, RefreshCw, Globe, Palette, Lock, Plug, Sparkles } from 'lucide-react';
 import { Z } from '../constants/zIndex';
+
+const TAB_ICON = { network: Globe, appearance: Palette, shortcuts: Keyboard, sync: Cloud, app: Info };
+const PROVIDER_ICON_CMP = { webdav: Cloud, r2: Database, ftp: Folder, sftp: Lock };
 
 const I18N = {
   'zh-CN': {
@@ -48,9 +52,9 @@ const I18N = {
       themeTitle: '界面主题',
       themeLabel: '主题',
       themeDesc: '选择浅色、深色或跟随系统设置',
-      themeLight: '☀️ 浅色',
-      themeSys: '💻 系统',
-      themeDark: '🌙 深色',
+      themeLight: '浅色',
+      themeSys: '系统',
+      themeDark: '深色',
       accentTitle: '强调色',
       accentLabel: '使用自定义强调色',
       accentDesc: '覆盖主题自带的强调色',
@@ -102,9 +106,9 @@ const I18N = {
       themeTitle: 'Interface Theme',
       themeLabel: 'Theme',
       themeDesc: 'Choose Light, Dark or System',
-      themeLight: '☀️ Light',
-      themeSys: '💻 System',
-      themeDark: '🌙 Dark',
+      themeLight: 'Light',
+      themeSys: 'System',
+      themeDark: 'Dark',
       accentTitle: 'Accent Color',
       accentLabel: 'Use Custom Accent',
       accentDesc: 'Override default accent color',
@@ -119,11 +123,11 @@ const I18N = {
 };
 
 const TABS = [
-  { id: 'network', icon: '🌐' },
-  { id: 'appearance', icon: '🎨' },
-  { id: 'shortcuts', icon: '⌨️' },
-  { id: 'sync', icon: '☁️' },
-  { id: 'app', icon: 'ℹ️' },
+  { id: 'network' },
+  { id: 'appearance' },
+  { id: 'shortcuts' },
+  { id: 'sync' },
+  { id: 'app' },
 ];
 
 const defaultWebdavForm = {
@@ -167,7 +171,6 @@ const defaultSFTPForm = {
 const PROVIDERS = {
   webdav: {
     name: 'WebDAV',
-    icon: '☁️',
     titleKey: 'WebDAV 配置',
     subtitleKey: '配置 WebDAV 端点用于加密同步服务器列表',
     accent: 'var(--green)',
@@ -192,7 +195,6 @@ const PROVIDERS = {
   },
   r2: {
     name: 'R2',
-    icon: '🗄️',
     titleKey: 'R2 (S3 兼容) 配置',
     subtitleKey: '配置 Cloudflare R2 或任意 S3 兼容对象存储用于加密同步',
     accent: '#3b82f6',
@@ -217,7 +219,6 @@ const PROVIDERS = {
   },
   ftp: {
     name: 'FTP',
-    icon: '📁',
     titleKey: 'FTP 配置',
     subtitleKey: '配置 FTP 服务器用于加密同步服务器列表',
     accent: '#f472b6',
@@ -243,7 +244,6 @@ const PROVIDERS = {
   },
   sftp: {
     name: 'SFTP',
-    icon: '🔒',
     titleKey: 'SFTP (SSH) 配置',
     subtitleKey: '配置 SFTP 服务器用于加密同步服务器列表',
     accent: '#22c55e',
@@ -270,10 +270,10 @@ const PROVIDERS = {
 };
 
 const PROVIDER_LIST = [
-  { id: 'webdav', icon: '☁️', label: 'WebDAV' },
-  { id: 'r2', icon: '🗄️', label: 'R2 (S3)' },
-  { id: 'ftp', icon: '📁', label: 'FTP' },
-  { id: 'sftp', icon: '🔒', label: 'SFTP' },
+  { id: 'webdav', label: 'WebDAV' },
+  { id: 'r2', label: 'R2 (S3)' },
+  { id: 'ftp', label: 'FTP' },
+  { id: 'sftp', label: 'SFTP' },
 ];
 
 function ProviderCard({ provider, form, configured, editing, onEdit, onCancelEdit, testing, testResult, onTest, loading, onSave, children }) {
@@ -282,7 +282,7 @@ function ProviderCard({ provider, form, configured, editing, onEdit, onCancelEdi
   return (
     <div style={{ background: 'var(--bg-2)', padding: 24, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20 }}>{provider.icon}</div>
+        <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--bg-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-2)' }}>{(() => { const IC = PROVIDER_ICON_CMP[Object.keys(PROVIDERS).find(k => PROVIDERS[k] === provider)]; return IC ? <IC size={20} /> : null; })()}</div>
         <div>
           <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)' }}>{$t(provider.titleKey)}</div>
           <div style={{ fontSize: 12, color: 'var(--text-4)' }}>{$t(provider.subtitleKey)}</div>
@@ -346,10 +346,10 @@ function ProviderCard({ provider, form, configured, editing, onEdit, onCancelEdi
           {children}
           <div style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center' }}>
             <button className="btn btn-secondary" onClick={onTest} disabled={testing}>
-              {testing ? $t('测试中...') : $t('🔌 测试连接')} {testResult === 'ok' && '✓'} {testResult === 'fail' && '✗'}
+              {testing ? $t('测试中...') : <><Plug size={14} /> {$t('测试连接')}</>} {testResult === 'ok' && '✓'} {testResult === 'fail' && '✗'}
             </button>
             <button className="btn btn-primary" onClick={onSave} disabled={loading}>
-              {loading ? $t('保存中...') : $t('💾 保存配置')}
+              {loading ? $t('保存中...') : <><Save size={14} /> {$t('保存配置')}</>}
             </button>
             {editing && (
               <button className="btn btn-ghost" onClick={onCancelEdit} style={{ marginLeft: 'auto' }}>{$t('取消')}</button>
@@ -854,7 +854,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
         {/* Settings Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
           <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-1)' }}>{t.title}</div>
-          <button className="btn btn-ghost btn-icon" onClick={onClose} style={{ color: 'var(--text-3)' }}>✕</button>
+          <button className="btn btn-ghost btn-icon" onClick={onClose} style={{ color: 'var(--text-3)' }}><X size={16} /></button>
         </div>
 
         {/* Settings Body Layout */}
@@ -875,9 +875,12 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   background: activeTab === tab.id ? 'var(--bg-2)' : 'transparent',
                   fontWeight: activeTab === tab.id ? 600 : 400,
                   transition: 'all 0.15s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 8,
                 }}
               >
-                <span>{tab.icon}</span> {t.tabs[tab.id]}
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>{(() => { const IC = TAB_ICON[tab.id]; return IC ? <IC size={16} /> : null; })()}</span> {t.tabs[tab.id]}
               </div>
             ))}
           </div>
@@ -1091,7 +1094,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                     ))}
                   </div>
                   <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--bg-2)', borderRadius: 8, fontSize: 12, color: 'var(--text-4)', lineHeight: 1.7, border: '1px solid var(--border-light)' }}>
-                    💡 <strong style={{ color: 'var(--text-3)' }}>{$t('提示：')}</strong>{t.network.tip}
+                    <span style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', marginRight: 4 }}><Lightbulb size={14} /></span> <strong style={{ color: 'var(--text-3)' }}>{$t('提示：')}</strong>{t.network.tip}
                   </div>
                 </div>
 
@@ -1257,9 +1260,9 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                         <div style={{ color: 'var(--text-4)', fontSize: 11 }}>{t.appearance.themeDesc}</div>
                       </div>
                       <div style={{ display: 'flex', background: 'var(--bg-1)', borderRadius: 'var(--radius-xl)', padding: 4, border: '1px solid var(--border)' }}>
-                        <button className={`btn btn-sm ${themeMode === 'light' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('light')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'light' ? 'var(--bg-3)' : 'transparent' }}>{t.appearance.themeLight}</button>
-                        <button className={`btn btn-sm ${themeMode === 'system' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('system')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'system' ? 'var(--bg-3)' : 'transparent' }}>{t.appearance.themeSys}</button>
-                        <button className={`btn btn-sm ${themeMode === 'dark' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('dark')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'dark' ? 'var(--bg-3)' : 'transparent' }}>{t.appearance.themeDark}</button>
+                        <button className={`btn btn-sm ${themeMode === 'light' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('light')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'light' ? 'var(--bg-3)' : 'transparent', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Sun size={14} />{t.appearance.themeLight}</button>
+                        <button className={`btn btn-sm ${themeMode === 'system' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('system')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'system' ? 'var(--bg-3)' : 'transparent', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Monitor size={14} />{t.appearance.themeSys}</button>
+                        <button className={`btn btn-sm ${themeMode === 'dark' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('dark')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'dark' ? 'var(--bg-3)' : 'transparent', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Moon size={14} />{t.appearance.themeDark}</button>
                       </div>
                     </div>
                   </div>
@@ -1390,7 +1393,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
                       }}
                     >
-                      {p.icon} {p.label}
+                      {(() => { const IC = PROVIDER_ICON_CMP[p.id]; return IC ? <IC size={16} /> : null; })()} {p.label}
                     </button>
                   ))}
                 </div>
@@ -1575,7 +1578,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                               addToast($t('读取私钥文件失败') + ': ' + e, 'error');
                             }
                           }} style={{ fontSize: 12 }}>
-                            {$t('📂 从文件加载私钥')}
+                            <FolderOpen size={14} /> {$t('从文件加载私钥')}
                           </button>
                         </div>
                       </>
@@ -1597,11 +1600,11 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 20 }}>{$t('选择自动同步使用的云服务，启动时按偏好执行合并同步')}</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                     {[
-                      { id: 'webdav', label: '☁️ WebDAV', desc: $t('仅使用 WebDAV 同步（默认），若未配置则尝试其他') },
-                      { id: 'r2', label: '🗄️ R2 (S3)', desc: $t('仅使用 R2 同步，若未配置则尝试其他') },
-                      { id: 'ftp', label: '📁 FTP', desc: $t('仅使用 FTP 同步，若未配置则尝试其他') },
-                      { id: 'sftp', label: '🔒 SFTP', desc: $t('仅使用 SFTP 同步，若未配置则尝试其他') },
-                      { id: 'all', label: $t('🔄 全部同步'), desc: $t('同时同步所有已配置的云服务，按顺序分别合并') },
+                      { id: 'webdav', label: <><Cloud size={14} /> WebDAV</>, desc: $t('仅使用 WebDAV 同步（默认），若未配置则尝试其他') },
+                      { id: 'r2', label: <><Database size={14} /> R2 (S3)</>, desc: $t('仅使用 R2 同步，若未配置则尝试其他') },
+                      { id: 'ftp', label: <><Folder size={14} /> FTP</>, desc: $t('仅使用 FTP 同步，若未配置则尝试其他') },
+                      { id: 'sftp', label: <><Lock size={14} /> SFTP</>, desc: $t('仅使用 SFTP 同步，若未配置则尝试其他') },
+                      { id: 'all', label: <><RefreshCw size={14} /> {$t('全部同步')}</>, desc: $t('同时同步所有已配置的云服务，按顺序分别合并') },
                     ].map(opt => (
                       <div
                         key={opt.id}
@@ -1642,7 +1645,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   
                   {(isConfigured || r2Configured || ftpConfigured || sftpConfigured) && (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, marginBottom: 20, color: 'var(--green)', fontSize: 13 }}>
-                      <span>✨</span> <span><strong>{$t('已开启自动云端备份：')}</strong>{$t('当您添加、编辑、删除服务器或修改配置时，后台将静默保存至云端。')}</span>
+                      <span style={{ display: 'inline-flex', alignItems: 'center' }}><Sparkles size={14} /></span> <span><strong>{$t('已开启自动云端备份：')}</strong>{$t('当您添加、编辑、删除服务器或修改配置时，后台将静默保存至云端。')}</span>
                     </div>
                   )}
 
@@ -1650,10 +1653,10 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   
                   <div style={{ display: 'flex', gap: 12 }}>
                     <button className="btn btn-secondary" onClick={handleSync} disabled={syncing}>
-                      {syncing ? $t('同步中...') : $t('🔀 合并同步')}
+                      {syncing ? $t('同步中...') : <><RefreshCw size={14} /> {$t('合并同步')}</>}
                     </button>
                     <button className="btn btn-secondary" onClick={handleRestore} disabled={loadingBackups || restoring}>
-                      {loadingBackups ? $t('加载备份列表中...') : $t('🔄 从云端恢复')}
+                      {loadingBackups ? $t('加载备份列表中...') : <><RefreshCw size={14} /> {$t('从云端恢复')}</>}
                     </button>
                   </div>
                 </div>

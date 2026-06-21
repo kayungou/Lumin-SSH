@@ -13,7 +13,7 @@ import { xml } from '@codemirror/lang-xml';
 import { sql } from '@codemirror/lang-sql';
 import { StreamLanguage } from '@codemirror/language';
 import { shell } from '@codemirror/legacy-modes/mode/shell';
-import { X } from 'lucide-react';
+import { X, Pencil, Save, SquarePen } from 'lucide-react';
 import { Z } from '../constants/zIndex';
 
 // Debian sources.list 语法高亮
@@ -444,18 +444,17 @@ export default function FileEditor({
               display: 'flex',
               alignItems: 'center',
               gap: 4,
-              padding: '4px 10px',
+              padding: '5px 12px',
               fontSize: 12,
               fontFamily: 'var(--font-mono)',
               cursor: 'pointer',
-              borderRadius: '4px 4px 0 0',
-              border: '1px solid transparent',
-              borderBottom: isActive ? '1px solid var(--bg-1)' : '1px solid var(--border)',
-              background: isActive ? 'var(--bg-1)' : 'transparent',
-              color: isActive ? 'var(--text-1)' : 'var(--text-3)',
+              borderRadius: 8,
+              border: isActive ? '1px solid var(--green)' : '1px solid var(--text-4)',
+              boxShadow: isActive ? '0 0 0 1px var(--green)' : 'none',
+              background: isActive ? 'var(--bg-4)' : 'var(--bg-3)',
+              color: isActive ? 'var(--text-1)' : 'var(--text-2)',
               whiteSpace: 'nowrap',
-              position: 'relative',
-              top: '1px',
+              opacity: isActive ? 1 : 0.7,
             }}
           >
             <span>{f.name}{fModified ? ' ●' : ''}</span>
@@ -500,7 +499,7 @@ export default function FileEditor({
         onMouseDown={mode === 'popup' ? startPopupDrag : undefined}
       >
         <div className="modal-title" style={{ flexShrink: 0, minWidth: 0 }}>
-          <span>✏️</span>
+          <SquarePen size={14} style={{ flexShrink: 0 }} />
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 14 }}>
             {activeFile ? activeFile.name : t('编辑器')}
           </span>
@@ -554,7 +553,7 @@ export default function FileEditor({
             <option value="split">{t('分栏编辑')}</option>
           </select>
           <button className="btn btn-primary btn-sm" onClick={handleSave} disabled={saving || !isModified}>
-            {saving ? t('保存中...') : t('💾 保存')}
+            {saving ? t('保存中...') : <><Save size={13} /> {t('保存')}</>}
           </button>
         </div>
         {mode !== 'split' && (
@@ -684,7 +683,7 @@ export default function FileEditor({
           animation: 'fadeIn 0.15s ease',
         }}
       >
-        <span>✏️</span>
+        <SquarePen size={14} style={{ flexShrink: 0 }} />
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 13, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
           {activeFile ? activeFile.name : t('编辑器')}
         </span>

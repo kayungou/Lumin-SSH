@@ -1,4 +1,5 @@
 import { Z } from '../constants/zIndex';
+import { Rocket } from 'lucide-react';
 
 export default function UpdateModal({ visible, updateInfo, downloadProgress, t, onClose, onUpdate }) {
   if (!visible || !updateInfo) return null;
@@ -13,7 +14,7 @@ export default function UpdateModal({ visible, updateInfo, downloadProgress, t, 
       animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
     }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-        <div style={{ fontSize: 28, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(16,185,129,0.3))' }}>🚀</div>
+        <div style={{ fontSize: 28, lineHeight: 1, filter: 'drop-shadow(0 4px 8px rgba(16,185,129,0.3))' }}><Rocket size={28} color="var(--green)" /></div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 15, fontWeight: 600, color: '#f0f6fc', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 8 }}>
             {t('发现新版本')} <span style={{ color: '#34d399', fontSize: 13, background: 'rgba(52, 211, 153, 0.1)', padding: '2px 6px', borderRadius: 6 }}>{updateInfo.version}</span>

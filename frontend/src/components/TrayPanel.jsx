@@ -1,3 +1,4 @@
+import { X } from 'lucide-react';
 import { Z } from '../constants/zIndex';
 
 export default function TrayPanel({ show, sessions, t, logoImg, onSessionClick, onClose, onQuit, onShowWindow }) {
@@ -41,7 +42,7 @@ export default function TrayPanel({ show, sessions, t, logoImg, onSessionClick, 
           <button
             style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#6e7681', fontSize: 14, padding: '2px 6px' }}
             onClick={onClose}
-          >✕</button>
+          ><X size={14} /></button>
         </div>
       </div>
 
@@ -73,7 +74,7 @@ export default function TrayPanel({ show, sessions, t, logoImg, onSessionClick, 
             <div style={{ fontSize: 40 }}>😤</div>
             <div style={{ fontSize: 14, fontWeight: 600, color: '#f0f6fc' }}>{t('一切都很安静')}</div>
             <div style={{ fontSize: 12, color: '#6e7681', textAlign: 'center', lineHeight: 1.6 }}>
-              {t('去连接个服务器吧，已经想念你了 🌿')}
+              {t('去连接个服务器吧，已经想念你了')}
             </div>
           </div>
         )}

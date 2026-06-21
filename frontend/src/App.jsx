@@ -17,7 +17,7 @@ import { useUpdateChecker } from './hooks/useUpdateChecker.js';
 import ConnectingCard from './components/ConnectingCard.jsx';
 import TrayPanel from './components/TrayPanel.jsx';
 import UpdateModal from './components/UpdateModal.jsx';
-import { Settings, House, Minus, Square, X, Eye, EyeOff } from 'lucide-react';
+import { Settings, House, Minus, Square, X, Eye, EyeOff, LayoutGrid, List, Search, Plus, Zap, BarChart3, Monitor, RefreshCw, FolderOpen, Terminal as TerminalIcon, Folder, ScrollText } from 'lucide-react';
 import { Z } from './constants/zIndex';
 
 import logoImg from './assets/logo.png';
@@ -40,6 +40,16 @@ export default function App() {
   const [showAddServer, setShowAddServer] = useState(false);
   const [editServer, setEditServer] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
+  const [tabContextMenu, setTabContextMenu] = useState(null);
+  useEffect(() => {
+    if (!tabContextMenu) return;
+    const close = () => setTabContextMenu(null);
+    // 延迟注册避免右键事件立即触发关闭
+    const timer = setTimeout(() => {
+      document.addEventListener('click', close);
+    }, 0);
+    return () => { clearTimeout(timer); document.removeEventListener('click', close); };
+  }, [tabContextMenu]);
   const [showTrayPanel, setShowTrayPanel] = useState(false);
   const [connectingServer, setConnectingServer] = useState(null); // { server, sessionId, startTime }
   const connectingServerRef = useRef(connectingServer);
@@ -356,12 +366,12 @@ export default function App() {
   // ── 连接成功后通用设置：查询 OS 信息、启用监控、持久化 OS ──
   const postConnectSetup = useCallback(async (sessionId, serverId, extraServerFields = {}) => {
     try {
-      const info = await AppGo.SystemInfo(sessionId);
-      if (info) {
-        setSessions((prev) => prev.map((s) => s.id === sessionId ? { ...s, osInfo: info } : s));
-        setMonitoringEnabled((prev) => ({ ...prev, [sessionId]: true }));
+      // 获取静态信息（OS/主机名/时区）
+      const staticInfo = await AppGo.GetServerStaticInfo(sessionId);
+      if (staticInfo) {
+        setSessions((prev) => prev.map((s) => s.id === sessionId ? { ...s, osInfo: staticInfo } : s));
         if (serverId) {
-          const detectedOs = info.os || info.platform || '';
+          const detectedOs = staticInfo.os || '';
           if (detectedOs) {
             setServers(prevServers => {
               const currentServer = prevServers.find(s => s.id === serverId);
@@ -375,6 +385,8 @@ export default function App() {
           }
         }
       }
+      // 启用监控
+      setMonitoringEnabled((prev) => ({ ...prev, [sessionId]: true }));
     } catch (_) {}
   }, []);
 
@@ -574,7 +586,7 @@ export default function App() {
 
       const action = await window.luminDialog?.choice?.(
         msg,
-        isNew ? t('🔑 主机密钥确认') : t('⚠️ 主机密钥已变更'),
+        isNew ? t('主机密钥确认') : t('主机密钥已变更'),
         [
           { label: t('只接受本次'), value: 1, secondary: true },
           { label: t('接受并保存'), value: 2, primary: true },
@@ -1011,15 +1023,20 @@ export default function App() {
                 <div
                   key={s.id}
                   className={`tab-item no-drag ${activeSessionId === s.id ? 'active' : ''}`}
-                  onClick={() => { setActiveSessionId(s.id); const sess = sessions.find(x => x.id === s.id); const lastTid = lastTerminalRef.current[s.id]; const validTerminal = sess?.terminals?.find(t => t.id === lastTid); setActiveTerminalId(validTerminal ? validTerminal.id : (sess?.terminals?.[0]?.id || s.id)); }}
+                  onClick={() => { setTabContextMenu(null); setActiveSessionId(s.id); const sess = sessions.find(x => x.id === s.id); const lastTid = lastTerminalRef.current[s.id]; const validTerminal = sess?.terminals?.find(t => t.id === lastTid); setActiveTerminalId(validTerminal ? validTerminal.id : (sess?.terminals?.[0]?.id || s.id)); }}
+                  onContextMenu={(e) => {
+                    e.preventDefault();
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTabContextMenu({
+                      sessionId: s.id,
+                      serverName: s.serverName || s.host,
+                      x: rect.left,
+                      y: rect.bottom + 4,
+                    });
+                  }}
                   style={{ height: '28px', minHeight: '28px', display: 'flex', alignItems: 'center', gap: '4px' }}
                 >
-                  <span style={{ fontSize: '10px', display: 'inline-block', lineHeight: 1 }}>
-                    {s.status === 'connecting' ? '🟡' :
-                     s.status === 'connected'  ? '🟢' :
-                     s.status === 'error'      ? '🔴' :
-                     s.status === 'closed'     ? '🔴' : '⚫'}
-                  </span>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', display: 'inline-block', lineHeight: 1, background: s.status === 'connecting' ? '#f0c000' : s.status === 'connected' ? 'var(--green, #22c55e)' : (s.status === 'error' || s.status === 'closed') ? 'var(--red, #ef4444)' : '#6b7280' }} />
                   <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     {s.serverName}
                   </span>
@@ -1038,15 +1055,17 @@ export default function App() {
                         marginRight: '2px',
                         fontSize: '12px',
                         transition: 'opacity 0.2s',
-                        userSelect: 'none'
+                        userSelect: 'none',
+                        display: 'flex',
+                        alignItems: 'center',
                       }}
                       onMouseEnter={(e) => e.target.style.opacity = 1}
                       onMouseLeave={(e) => e.target.style.opacity = 0.6}
                     >
-                      ⟳
+                      <RefreshCw size={12} />
                     </span>
                   )}
-                  <span className="tab-close no-drag" onClick={(e) => closeSession(s.id, e)}>✕</span>
+                  <span className="tab-close no-drag" onClick={(e) => closeSession(s.id, e)} style={{ display: "flex", alignItems: "center" }}><X size={12} /></span>
                 </div>
               ))}
             </div>
@@ -1078,7 +1097,7 @@ export default function App() {
               {/* ⚡ 闪电直连卡片 */}
               <div className="glass-card quick-connect-box">
                 <div className="card-header-icon-title">
-                  <span className="card-header-icon">⚡</span>
+                  <span className="card-header-icon" style={{ display: "flex", alignItems: "center" }}><Zap size={18} /></span>
                   <span className="card-header-title">{t('闪电直连')}</span>
                 </div>
                 <form onSubmit={handleQuickConnectDirect} className="quick-connect-form">
@@ -1117,7 +1136,7 @@ export default function App() {
                       <div className="form-group-compact">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <label style={{ marginBottom: 0 }}>{t('私钥内容')}</label>
-                          <button type="button" className="btn-text-action" onClick={handleQuickPrivateKeyFile}>📁 {t('浏览')}</button>
+                          <button type="button" className="btn-text-action" onClick={handleQuickPrivateKeyFile} style={{ display: "flex", alignItems: "center", gap: 4 }}><FolderOpen size={14} /> {t('浏览')}</button>
                         </div>
                         <textarea className="textarea-compact" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" value={quickKey} onChange={e => setQuickKey(e.target.value)} />
                       </div>
@@ -1137,9 +1156,9 @@ export default function App() {
               {/* 📊 状态概览 */}
               <div className="glass-card status-overview-box">
                 <div className="card-header-icon-title">
-                  <span className="card-header-icon">📊</span>
+                  <span className="card-header-icon" style={{ display: "flex", alignItems: "center" }}><BarChart3 size={18} /></span>
                   <span className="card-header-title">{t('系统状态')}</span>
-                  <button className={`btn-icon-spin ${isRefreshingPing ? 'spinning' : ''}`} onClick={handleRefreshPing} title="Refresh" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14 }}>🔄</button>
+                  <button className={`btn-icon-spin ${isRefreshingPing ? 'spinning' : ''}`} onClick={handleRefreshPing} title="Refresh" style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: "flex", alignItems: "center" }}><RefreshCw size={14} /></button>
                 </div>
                 <div className="stats-grid">
                   <div className="stat-item">
@@ -1164,43 +1183,57 @@ export default function App() {
               {/* 🖥 全部主机目录 */}
               <div className="hosts-section-container">
                 <div className="section-title-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <span className="section-title-icon">🖥</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
+                    <span className="section-title-icon" style={{ display: "flex", alignItems: "center" }}><Monitor size={16} /></span>
                     <span className="section-title">{t('主机')}</span>
-                    <div className="view-mode-toggles" style={{ display: 'flex', background: 'var(--bg-2)', borderRadius: 6, padding: 2 }}>
+                    {/* 搜索框 */}
+                    <div style={{ position: 'relative', flex: 1, maxWidth: 280, minWidth: 120 }}>
+                      <Search size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-4)', pointerEvents: 'none' }} />
+                      <input
+                        className="input-compact"
+                        placeholder={t('搜索服务器...')}
+                        value={searchQuery}
+                        onChange={e => setSearchQuery(e.target.value)}
+                        style={{ width: '100%', paddingLeft: 28, height: 30, fontSize: 12, borderRadius: 8, background: 'var(--bg-2)', border: '1px solid var(--border)' }}
+                      />
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 12 }}>
+                    {/* 视图切换 - 分段控件 */}
+                    <div style={{ display: 'flex', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border)' }}>
                       <button
-                        className={`btn-icon ${serverListViewMode === 'grid' ? 'active' : ''}`}
                         onClick={() => { setServerListViewMode('grid'); localStorage.setItem('serverListViewMode', 'grid'); }}
                         title={t('卡片视图')}
-                        style={{ padding: '2px 6px', fontSize: 12, background: serverListViewMode === 'grid' ? 'var(--bg-3)' : 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                        style={{ padding: '5px 10px', fontSize: 12, background: serverListViewMode === 'grid' ? 'var(--bg-3)' : 'var(--bg-1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: serverListViewMode === 'grid' ? 'var(--text-1)' : 'var(--text-4)', transition: 'all 0.15s' }}
                       >
-                        🔲
+                        <LayoutGrid size={14} />
                       </button>
+                      <div style={{ width: 1, background: 'var(--border)' }} />
                       <button
-                        className={`btn-icon ${serverListViewMode === 'table' ? 'active' : ''}`}
                         onClick={() => { setServerListViewMode('table'); localStorage.setItem('serverListViewMode', 'table'); }}
                         title={t('列表视图')}
-                        style={{ padding: '2px 6px', fontSize: 12, background: serverListViewMode === 'table' ? 'var(--bg-3)' : 'transparent', border: 'none', borderRadius: 4, cursor: 'pointer' }}
+                        style={{ padding: '5px 10px', fontSize: 12, background: serverListViewMode === 'table' ? 'var(--bg-3)' : 'var(--bg-1)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', color: serverListViewMode === 'table' ? 'var(--text-1)' : 'var(--text-4)', transition: 'all 0.15s' }}
                       >
-                        📄
+                        <List size={14} />
                       </button>
                     </div>
+                    {/* 隐藏敏感信息 */}
                     <button
-                      className={`btn-icon ${hideSensitive ? 'active' : ''}`}
                       onClick={() => { const v = !hideSensitive; setHideSensitive(v); localStorage.setItem('hideSensitive', v); }}
                       title={hideSensitive ? t('显示敏感信息') : t('隐藏敏感信息')}
-                      style={{ padding: '2px 8px', fontSize: 12, background: hideSensitive ? 'var(--bg-3)' : 'transparent', border: hideSensitive ? '1px solid var(--orange)' : '1px solid rgba(255,255,255,0.1)', borderRadius: 4, cursor: 'pointer', color: hideSensitive ? 'var(--orange)' : 'var(--text-3)' }}
+                      style={{ padding: '5px 8px', background: hideSensitive ? 'var(--yellow-dim)' : 'var(--bg-1)', border: '1px solid ' + (hideSensitive ? 'var(--yellow)' : 'var(--border)'), borderRadius: 8, cursor: 'pointer', display: 'flex', alignItems: 'center', color: hideSensitive ? 'var(--yellow)' : 'var(--text-4)', transition: 'all 0.15s' }}
                     >
-                      {hideSensitive ? '🙈' : '🙉'}
+                      {hideSensitive ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                    {/* 添加按钮 */}
+                    <button
+                      className="btn btn-primary btn-sm"
+                      style={{ fontSize: 12, padding: '5px 14px', display: 'flex', alignItems: 'center', gap: 4 }}
+                      onClick={() => { setEditServer(null); setShowAddServer(true); }}
+                    >
+                      <Plus size={14} /> {t('添加')}
                     </button>
                   </div>
-                  <button
-                    className="btn btn-primary btn-sm"
-                    style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 12px' }}
-                    onClick={() => { setEditServer(null); setShowAddServer(true); }}
-                  >
-                    {t('添加')}
-                  </button>
                 </div>
 
                 <div className="hosts-scroll-area">
@@ -1229,24 +1262,27 @@ export default function App() {
                   <button
                     className={`content-tab ${contentTab === 'terminal' ? 'active' : ''}`}
                     onClick={() => setContentTab('terminal')}
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
                   >
-                    🖥 {t('终端')}
+                    <TerminalIcon size={14} /> {t('终端')}
                   </button>
                   {fileManagerPosition === 'tab' && (
                     <button
                       className={`content-tab ${contentTab === 'files' ? 'active' : ''}`}
                       onClick={() => setContentTab('files')}
                       disabled={activeSession.status !== 'connected'}
+                      style={{ display: "flex", alignItems: "center", gap: 4 }}
                     >
-                      📁 {t('文件管理')}
+                      <Folder size={14} /> {t('文件管理')}
                     </button>
                   )}
                   <button
                     className={`content-tab ${contentTab === 'history' ? 'active' : ''}`}
                     onClick={() => setContentTab('history')}
                     disabled={activeSession.status !== 'connected'}
+                    style={{ display: "flex", alignItems: "center", gap: 4 }}
                   >
-                    📜 {t('历史指令')}
+                    <ScrollText size={14} /> {t('历史指令')}
                   </button>
                 </div>
                 
@@ -1292,19 +1328,19 @@ export default function App() {
                     title={term.label}
                     style={{
                       display: 'flex', alignItems: 'center', gap: 4,
-                      padding: '2px 10px',
+                      padding: '3px 10px',
                       fontSize: 11,
-                      borderRadius: '4px 4px 0 0',
+                      borderRadius: 6,
                       cursor: 'pointer',
                       userSelect: 'none',
-                      background: activeTerminalId === term.id ? 'var(--bg-3)' : 'transparent',
+                      background: activeTerminalId === term.id ? 'var(--bg-3)' : 'var(--bg-2)',
                       color: activeTerminalId === term.id ? 'var(--text-1)' : 'var(--text-3)',
-                      border: activeTerminalId === term.id ? '1px solid var(--border)' : '1px solid transparent',
-                      borderBottom: activeTerminalId === term.id ? '1px solid var(--bg-3)' : '1px solid transparent',
+                      border: activeTerminalId === term.id ? '1px solid var(--green)' : '1px solid var(--border)',
+                      borderBottom: activeTerminalId === term.id ? '1px solid var(--green)' : '1px solid var(--border)',
                       transition: 'all 0.15s',
                     }}
                   >
-                    <span style={{ fontSize: 11 }}>🖥</span>
+                    <span style={{ display: "flex", alignItems: "center" }}><Monitor size={11} /></span>
                     <span>{term.label}</span>
                     {activeSession.terminals.length > 1 && (
                       <span
@@ -1312,11 +1348,11 @@ export default function App() {
                         onClick={(e) => closeTerminal(activeSession.id, term.id, e)}
                         style={{
                           marginLeft: 4, fontSize: 10, opacity: 0.5,
-                          cursor: 'pointer', lineHeight: 1,
+                          cursor: 'pointer', lineHeight: 1, display: "flex", alignItems: "center",
                         }}
                         onMouseEnter={e2 => e2.currentTarget.style.opacity = 1}
                         onMouseLeave={e2 => e2.currentTarget.style.opacity = 0.5}
-                      >✕</span>
+                      ><X size={10} /></span>
                     )}
                   </div>
                 ))}
@@ -1326,13 +1362,19 @@ export default function App() {
                   onClick={() => openNewTerminal(activeSession.id)}
                   title={t('新建终端')}
                   style={{
-                    marginLeft: 2, padding: '1px 6px',
+                    marginLeft: 2, padding: '5px 12px',
                     fontSize: 12, lineHeight: 1,
-                    cursor: 'pointer', border: 'none',
-                    background: 'transparent', color: 'var(--text-3)',
-                    borderRadius: 4,
+                    cursor: 'pointer',
+                    border: '1px solid var(--text-4)',
+                    background: 'var(--bg-3)', color: 'var(--text-2)',
+                    borderRadius: 8,
+                    opacity: 0.7,
+                    transition: 'all 0.2s',
+                    display: 'flex', alignItems: 'center', gap: 4,
                   }}
-                >➕ {t('新建终端')}</button>
+                  onMouseEnter={e => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.background = 'var(--bg-4)'; e.currentTarget.style.borderColor = 'var(--text-3)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.background = 'var(--bg-3)'; e.currentTarget.style.borderColor = 'var(--text-4)'; }}
+                ><Plus size={14} /> {t('新建终端')}</button>
               </div>
             )}
 
@@ -1587,6 +1629,48 @@ export default function App() {
         onUpdate={handleApplyStartupUpdate}
       />
       <GlobalContextMenu />
+
+      {/* ── 标签右键菜单 ── */}
+      {tabContextMenu && (
+        <div style={{
+            position: 'fixed',
+            left: tabContextMenu.x,
+            top: tabContextMenu.y,
+            zIndex: 10000,
+            background: 'var(--bg-2)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '4px 0',
+            minWidth: 140,
+            boxShadow: '0 4px 16px rgba(0,0,0,0.3)',
+          }}>
+            <div
+              style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', color: 'var(--text-2)', transition: 'background 0.1s' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              onClick={() => {
+                const sessionId = tabContextMenu.sessionId;
+                setTabContextMenu(null);
+                // 直接关闭，不弹确认框
+                const session = sessionsRef.current.find(s => s.id === sessionId);
+                const termIds = session?.terminals ? session.terminals.map(t => t.id) : [sessionId];
+                termIds.forEach(id => cancelledConnectionsRef.current.add(id));
+                for (const id of termIds) {
+                  AppGo.DisconnectSSH(id).catch(() => {});
+                }
+                setSessions(prev => prev.filter(s => s.id !== sessionId));
+                if (activeSessionId === sessionId) {
+                  switchToNextSession(sessionId);
+                }
+                if (connectingServerRef.current?.sessionId === sessionId) {
+                  setConnectingServer(null);
+                }
+              }}
+            >
+              <X size={14} /> {t('关闭连接')}
+            </div>
+          </div>
+      )}
     </div>
   );
 }

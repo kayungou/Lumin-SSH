@@ -4,6 +4,12 @@ import * as AppGo from '../../wailsjs/go/main/App.js';
 const FileEditor = React.lazy(() => import('./FileEditor.jsx'));
 import { EventsOn } from '../../wailsjs/runtime/runtime.js';
 import { useTranslation, t as tKey, getLanguage } from '../i18n.js';
+import {
+  Folder, FolderOpen, FolderPlus, File, FileText, FilePlus, FileCode,
+  FileArchive, Settings, ClipboardList, Wrench, Image, Code, Globe,
+  Palette, Database, Terminal, Film, Music, Archive, HardDrive, BookOpen,
+  Pencil, PenLine, Download, Upload, Trash2, RefreshCw, Lock, FolderUp, SquarePen,
+} from 'lucide-react';
 
 // 格式化文件大小
 function fmtSize(bytes) {
@@ -26,24 +32,41 @@ function fmtDate(ts) {
 }
 
 // 文件图标
+const ICON_SIZE = 16;
 function fileIcon(name, isDir) {
-  if (isDir) return '📁';
+  if (isDir) return <Folder size={ICON_SIZE} style={{ color: '#f5a623' }} />;
   const ext = (name.split('.').pop() || '').toLowerCase();
-  const map = {
-    js: '🟨', jsx: '🟨', ts: '🔷', tsx: '🔷', vue: '💚',
-    py: '🐍', rb: '💎', go: '🐹', rs: '🦀', java: '☕',
-    c: '🔵', cpp: '🔵', h: '🔵', cs: '🟣',
-    html: '🌐', css: '🎨', scss: '🎨', less: '🎨',
-    json: '⚙️', yaml: '⚙️', yml: '⚙️', toml: '⚙️', ini: '⚙️', env: '⚙️',
-    md: '📝', txt: '📄', log: '📋',
-    png: '🖼', jpg: '🖼', jpeg: '🖼', gif: '🖼', svg: '🖼', webp: '🖼',
-    zip: '🗜', tar: '🗜', gz: '🗜', rar: '🗜', '7z': '🗜',
-    sh: '🔧', bash: '🔧', zsh: '🔧',
-    pdf: '📕', sql: '🗃', xml: '📰', php: '🐘',
-    mp4: '🎬', mkv: '🎬', avi: '🎬',
-    mp3: '🎵', wav: '🎵',
+  const colorMap = {
+    js: '#f7df1e', jsx: '#f7df1e', ts: '#3178c6', tsx: '#3178c6', vue: '#42b883',
+    py: '#3572a5', rb: '#cc342d', go: '#00add8', rs: '#dea584', java: '#b07219',
+    c: '#555555', cpp: '#f34b7d', h: '#555555', cs: '#178600',
+    html: '#e34c26', css: '#563d7c', scss: '#c6538c', less: '#1d365d',
+    json: '#4b5563', yaml: '#4b5563', yml: '#4b5563', toml: '#9c4221', ini: '#4b5563', env: '#4b5563',
+    md: '#083fa1', txt: '#4b5563', log: '#4b5563',
+    png: '#a855f7', jpg: '#a855f7', jpeg: '#a855f7', gif: '#a855f7', svg: '#a855f7', webp: '#a855f7',
+    zip: '#eab308', tar: '#eab308', gz: '#eab308', rar: '#eab308', '7z': '#eab308',
+    sh: '#89e051', bash: '#89e051', zsh: '#89e051',
+    pdf: '#ff0000', sql: '#e38c00', xml: '#f16529', php: '#4f5d95',
+    mp4: '#6366f1', mkv: '#6366f1', avi: '#6366f1',
+    mp3: '#1db954', wav: '#1db954',
   };
-  return map[ext] || '📄';
+  const iconMap = {
+    js: Code, jsx: Code, ts: Code, tsx: Code, vue: Code,
+    py: Terminal, rb: HardDrive, go: Code, rs: Code, java: Code,
+    c: Code, cpp: Code, h: Code, cs: Code,
+    html: Globe, css: Palette, scss: Palette, less: Palette,
+    json: Settings, yaml: Settings, yml: Settings, toml: Settings, ini: Settings, env: Settings,
+    md: FileText, txt: File, log: ClipboardList,
+    png: Image, jpg: Image, jpeg: Image, gif: Image, svg: Image, webp: Image,
+    zip: FileArchive, tar: FileArchive, gz: FileArchive, rar: FileArchive, '7z': FileArchive,
+    sh: Wrench, bash: Wrench, zsh: Wrench,
+    pdf: BookOpen, sql: Database, xml: FileCode, php: Terminal,
+    mp4: Film, mkv: Film, avi: Film,
+    mp3: Music, wav: Music,
+  };
+  const IconComp = iconMap[ext] || File;
+  const color = colorMap[ext] || '#4b5563';
+  return <IconComp size={ICON_SIZE} style={{ color }} />;
 }
 
 // 判断是否可以编辑（文本文件）
@@ -190,7 +213,7 @@ function ChmodDialog({ path, permission, mode, onSave, onClose, t }) {
     <div className="modal-overlay">
       <div className="modal modal-sm">
         <div className="modal-header">
-          <div className="modal-title">🔐 {t('修改权限')}</div>
+          <div className="modal-title"><Lock size={14} /> {t('修改权限')}</div>
         </div>
         <div className="modal-body">
           <div className="chmod-dialog-body">
@@ -285,48 +308,48 @@ function ContextMenu({ pos, item, onClose, onDownload, onEdit, onRename, onDelet
     >
       {item && !item.isDirectory && isEditable(item.name) && (
         <div className="context-menu-item" onClick={onEdit}>
-          <span>✏️</span> {t('编辑')}
+          <SquarePen size={14} /> {t('编辑')}
         </div>
       )}
       {item && !item.isDirectory && (
         <div className="context-menu-item" onClick={onDownload}>
-          <span>⬇️</span> {t('下载到本地')}
+          <Download size={14} /> {t('下载到本地')}
         </div>
       )}
       {item && (
         <div className="context-menu-item" onClick={onCompress}>
-          <span>📦</span> {t('压缩 (tar.gz)')}
+          <Archive size={14} /> {t('压缩 (tar.gz)')}
         </div>
       )}
       {item && !item.isDirectory && isArchive(item.name) && (
         <div className="context-menu-item" onClick={onUncompress}>
-          <span>🗜</span> {t('解压')}
+          <FileArchive size={14} /> {t('解压')}
         </div>
       )}
       {item && (
         <div className="context-menu-item" onClick={onRename}>
-          <span>✏</span> {t('重命名')}
+          <PenLine size={14} /> {t('重命名')}
         </div>
       )}
       {item && (
         <div className="context-menu-item" onClick={onChmod}>
-          <span>🔐</span> {t('修改权限')}
+          <Lock size={14} /> {t('修改权限')}
         </div>
       )}
       {item && <div className="context-menu-divider" />}
       {!item && (
         <div className="context-menu-item" onClick={onNewFile}>
-          <span>📄</span> {t('新建文件')}
+          <FilePlus size={14} /> {t('新建文件')}
         </div>
       )}
       {!item && (
         <div className="context-menu-item" onClick={onMkdir}>
-          <span>📁</span> {t('新建文件夹')}
+          <FolderPlus size={14} /> {t('新建文件夹')}
         </div>
       )}
       {item && (
         <div className="context-menu-item danger" onClick={onDelete}>
-          <span>🗑</span> {t('删除')}
+          <Trash2 size={14} /> {t('删除')}
         </div>
       )}
     </div>
@@ -927,17 +950,17 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
         />
 
         <div className="file-toolbar-actions">
-          <button className="btn btn-secondary btn-sm" onClick={handleNewFile}>📄 {t('新建文件')}</button>
-          <button className="btn btn-secondary btn-sm" onClick={handleMkdir}>📁 {t('新建文件夹')}</button>
+          <button className="btn btn-secondary btn-sm" onClick={handleNewFile}><FilePlus size={14} /> {t('新建文件')}</button>
+          <button className="btn btn-secondary btn-sm" onClick={handleMkdir}><FolderPlus size={14} /> {t('新建文件夹')}</button>
           <button className="btn btn-secondary btn-sm" onClick={handleUpload}>
-            ⬆ {t('上传文件')}
+            <Upload size={14} /> {t('上传文件')}
           </button>
           <button
             className="btn btn-ghost btn-sm btn-icon"
             title={t('刷新')}
             onClick={() => loadDir(currentPath)}
           >
-            ↻
+            <RefreshCw size={14} />
           </button>
         </div>
       </div>
@@ -972,7 +995,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
               }}
             >
               <div className="file-name-cell">
-                <span className="file-icon">↩</span>
+                <span className="file-icon"><FolderUp size={16} /></span>
                 <span className="file-name is-dir">..</span>
               </div>
               <span />
@@ -984,14 +1007,14 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
 
           {loading && (
             <div className="empty-state">
-              <div className="spin" style={{ fontSize: 24 }}>⟳</div>
+              <div className="spin" style={{ fontSize: 24 }}><RefreshCw size={24} /></div>
               <div className="empty-state-text">{t('加载中...')}</div>
             </div>
           )}
 
           {!loading && items.length === 0 && (
             <div className="empty-state">
-              <div className="empty-state-icon">📂</div>
+              <div className="empty-state-icon"><FolderOpen size={48} strokeWidth={1.5} /></div>
               <div className="empty-state-text">{t('目录为空')}</div>
             </div>
           )}
@@ -1043,26 +1066,26 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
                       className="btn btn-ghost btn-sm btn-icon"
                       title={t('编辑')}
                       onClick={(e) => { e.stopPropagation(); handleEdit(item); }}
-                    >✏️</button>
+                    ><SquarePen size={14} /></button>
                   )}
                   {!item.isDirectory && (
                     <button
                       className="btn btn-ghost btn-sm btn-icon"
                       title={t('下载到本地')}
                       onClick={(e) => { e.stopPropagation(); handleDownload(item); }}
-                    >⬇️</button>
+                    ><Download size={14} /></button>
                   )}
                   <button
                     className="btn btn-ghost btn-sm btn-icon"
                     title={t('重命名')}
                     onClick={(e) => { e.stopPropagation(); startRename(item); }}
-                  >✏</button>
+                  ><PenLine size={14} /></button>
                   <button
                     className="btn btn-ghost btn-sm btn-icon"
                     title={t('删除')}
                     style={{ color: 'var(--red)' }}
                     onClick={(e) => { e.stopPropagation(); handleDelete(item); }}
-                  >🗑</button>
+                  ><Trash2 size={14} /></button>
                 </div>
               </div>
             );
@@ -1074,7 +1097,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
       {/* Context Menu */}
       {isDragOver && (
         <div className="drag-overlay">
-          <div className="drag-overlay-text">⬆ {t('释放以上传文件/文件夹')}</div>
+          <div className="drag-overlay-text"><Upload size={14} /> {t('释放以上传文件/文件夹')}</div>
         </div>
       )}
 
@@ -1102,7 +1125,7 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
       {transferInfo && (
         <div className="transfer-toast">
           <div className="transfer-toast-title">
-            {transferInfo.direction === 'upload' ? `⬆ ${t('上传中') || '上传中'}` : `⬇ ${t('下载中') || '下载中'}`}: {transferInfo.name}
+            {transferInfo.direction === 'upload' ? <><Upload size={14} /> {t('上传中') || '上传中'}</> : <><Download size={14} /> {t('下载中') || '下载中'}</>}: {transferInfo.name}
           </div>
           <div className="progress-bar-track">
             <div

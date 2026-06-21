@@ -6,6 +6,7 @@ import {
   formatRate,
   formatTransferTotal,
 } from './probeFormatting.js';
+import { BarChart3, Cpu, HardDrive, Globe, ClipboardList, Clipboard, Search, Check, Monitor, EyeOff, Eye, RefreshCw, MemoryStick, ArrowLeftRight } from 'lucide-react';
 import { Z } from '../constants/zIndex';
 import { useTranslation } from '../i18n.js';
 
@@ -100,7 +101,7 @@ const Card = React.memo(function Card({ children, style }) {
 const SectionHeader = React.memo(function SectionHeader({ icon, title, badge, right }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-      <span style={{ fontSize: 14 }}>{icon}</span>
+      <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-4)' }}>{icon}</span>
       <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', flex: 1 }}>{title}</span>
       {badge && (
         <span style={{
@@ -268,15 +269,15 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
       <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'var(--bg-0)', position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 50% 35%, rgba(34,197,94,0.06) 0%, transparent 65%)', pointerEvents: 'none' }} />
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px 16px', gap: 16 }}>
-          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26 }}>📊</div>
+          <div style={{ width: 56, height: 56, borderRadius: 14, background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#22c55e' }}><BarChart3 size={26} /></div>
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-1)', marginBottom: 6 }}>{t('系统监控')}</div>
             <div style={{ fontSize: 12, color: 'var(--text-4)', lineHeight: 1.6, maxWidth: 220 }}>{t('实时查看服务器 CPU、内存、网络和磁盘使用情况')}</div>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 220 }}>
-            {[['⚡', t('CPU 每核心实时占用')], ['💾', t('内存甜甜圈图分析')], ['🌐', t('网络速率折线图')], ['🗄', t('磁盘分区挂载表')], ['📋', t('进程热点排行')]].map(([icon, text]) => (
+            {[[<Cpu size={14} />, t('CPU 每核心实时占用')], [<MemoryStick size={14} />, t('内存甜甜圈图分析')], [<Globe size={14} />, t('网络速率折线图')], [<HardDrive size={14} />, t('磁盘分区挂载表')], [<ClipboardList size={14} />, t('进程热点排行')]].map(([icon, text]) => (
               <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 11px', borderRadius: 6, background: 'var(--bg-1)', border: '1px solid var(--border-light)' }}>
-                <span style={{ fontSize: 13 }}>{icon}</span>
+                <span style={{ fontSize: 13, display: 'flex', alignItems: 'center', color: 'var(--text-4)' }}>{icon}</span>
                 <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{text}</span>
               </div>
             ))}
@@ -291,7 +292,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14, zIndex: Z.COMPONENT_OVERLAY }}>
             <div style={{ background: 'var(--bg-1)', border: '1px solid rgba(34,197,94,0.22)', borderRadius: 14, padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.65)', maxWidth: 260 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>🔍</div>
+                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-4)' }}><Search size={16} /></span>
                 <div>
                   <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-1)' }}>{t('注入监控脚本')}</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>LuminSSH Probe v2</div>
@@ -301,9 +302,12 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
                 {t('将在服务器写入')} <code style={{ color: '#4ade80', background: 'rgba(34,197,94,0.08)', padding: '2px 5px', borderRadius: 3, fontSize: 11 }}>~/.lumin/probe.sh</code>{t('，轻量监控脚本。')}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
-                {[t('✅ 纯 Shell，读取 /proc 文件系统'), t('✅ 无需安装任何软件或依赖'), t('✅ 不修改系统配置，不常驻后台'), t('✅ 断开连接后自动停止采集')].map(item => (
-                  <div key={item} style={{ fontSize: 11.5, color: 'var(--text-4)' }}>{item}</div>
-                ))}
+                {[
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-4)' }} key="1"><Check size={12} style={{ flexShrink: 0 }} /> {t('纯 Shell，读取 /proc 文件系统')}</div>,
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-4)' }} key="2"><Check size={12} style={{ flexShrink: 0 }} /> {t('无需安装任何软件或依赖')}</div>,
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-4)' }} key="3"><Check size={12} style={{ flexShrink: 0 }} /> {t('不修改系统配置，不常驻后台')}</div>,
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 11.5, color: 'var(--text-4)' }} key="4"><Check size={12} style={{ flexShrink: 0 }} /> {t('断开连接后自动停止采集')}</div>,
+                ]}
               </div>
               <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
                 <button onClick={() => setShowConfirm(false)} style={{ flex: 1, padding: '8.5px 0', borderRadius: 7, border: '1px solid var(--border-light)', background: 'transparent', color: 'var(--text-4)', fontSize: 12.5, cursor: 'pointer' }}>{t('取消')}</button>
@@ -342,7 +346,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
       <Card>
         <div style={{ marginBottom: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-            <span style={{ fontSize: 14 }}>🖥</span>
+            <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-4)' }}><Monitor size={14} /></span>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{t('系统')}</span>
           </div>
           {displayIP && (
@@ -353,11 +357,11 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
               <button onClick={() => { navigator.clipboard.writeText(displayIP); addToast?.(t('已复制') + ' ' + displayIP, 'success'); }} title={t('复制 IP')}
                 style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', padding: '2px 4px', fontSize: 13, lineHeight: 1, borderRadius: 3 }}
                 onMouseOver={e => e.currentTarget.style.color = 'var(--text-1)'}
-                onMouseOut={e => e.currentTarget.style.color = 'var(--text-4)'}>📋</button>
+                onMouseOut={e => e.currentTarget.style.color = 'var(--text-4)'}><Clipboard size={13} /></button>
               <button onClick={() => setHideIP(p => !p)} title={hideIP ? t('显示 IP') : t('隐藏 IP')}
                 style={{ background: 'none', border: 'none', color: 'var(--text-4)', cursor: 'pointer', padding: '2px 4px', fontSize: 13, lineHeight: 1, borderRadius: 3 }}
                 onMouseOver={e => e.currentTarget.style.color = 'var(--text-1)'}
-                onMouseOut={e => e.currentTarget.style.color = 'var(--text-4)'}>{hideIP ? '👁' : '🙈'}</button>
+                onMouseOut={e => e.currentTarget.style.color = 'var(--text-4)'}>{hideIP ? <Eye size={13} /> : <EyeOff size={13} />}</button>
             </div>
           )}
         </div>
@@ -374,7 +378,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
       {/* ── CPU ── */}
       <Card>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 14 }}>⚡</span>
+          <span style={{ display: 'flex', alignItems: 'center', color: '#6366f1' }}><Cpu size={14} /></span>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-1)', flex: 1 }}>CPU {cores.length > 0 ? `${cores.length}${t('核')}` : ''}</span>
           <div style={{ width: 76, height: 24 }}>
             <Sparkline data={cpuHist} color="#6366f1" height={24} />
@@ -400,7 +404,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
 
       {/* ── 内存 ── */}
       <Card>
-        <SectionHeader icon="💾" title={t('内存')} badge={fmem(info.memTotal)} />
+        <SectionHeader icon={<MemoryStick size={14} />} title={t('内存')} badge={fmem(info.memTotal)} />
         <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
           <MemDonut used={info.memUsed} cache={info.memCache} free={info.memFree} total={info.memTotal} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
@@ -423,7 +427,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
         {info.swapTotal > 0 && (
           <div style={{ marginTop: 8, paddingTop: 6, borderTop: '1px solid var(--border)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 11.5, color: 'var(--text-4)' }}>🔄 SWAP</span>
+              <span style={{ fontSize: 11.5, color: 'var(--text-4)', display: 'inline-flex', alignItems: 'center', gap: 4 }}><ArrowLeftRight size={12} /> SWAP</span>
               <span style={{ fontSize: 11.5, fontFamily: 'var(--font-mono)', color: 'var(--text-3)' }}>{fmem(info.swapTotal)}</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -440,7 +444,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
       {/* ── 网络 ── */}
       <Card>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-          <span style={{ fontSize: 14 }}>🌐</span>
+          <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-4)' }}><Globe size={14} /></span>
           <span style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text-1)', flex: 1 }}>{t('网络')}</span>
         </div>
         <div style={{ marginBottom: 6 }}>
@@ -469,7 +473,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
 
       {/* ── 磁盘 ── */}
       <Card>
-        <SectionHeader icon="🗄" title={t('磁盘')} badge={`${formatCapacity(info.diskUsed, 1)} / ${formatCapacity(info.diskTotal, 1)}`} />
+        <SectionHeader icon={<HardDrive size={14} />} title={t('磁盘')} badge={`${formatCapacity(info.diskUsed, 1)} / ${formatCapacity(info.diskTotal, 1)}`} />
         {/* Root partition info */}
         <div style={{ display: 'flex', alignItems: 'center', marginBottom: 7 }}>
           <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e', marginRight: 5 }} />
@@ -508,7 +512,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
       {/* ── 进程管理 ── */}
       <Card style={{ marginBottom: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-          <span style={{ fontSize: 13 }}>📋</span>
+          <span style={{ display: 'flex', alignItems: 'center', color: 'var(--text-4)' }}><ClipboardList size={14} /></span>
           <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-1)', flex: 1 }}>{t('进程管理')}</span>
           <span style={{ fontSize: 11.5, color: 'var(--text-4)' }}>TOP CPU</span>
         </div>

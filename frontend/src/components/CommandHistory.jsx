@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 import { useTranslation } from '../i18n.js';
+import { ScrollText, Keyboard, Clipboard, Trash2, Rocket } from 'lucide-react';
 
 export default function CommandHistory({ sessionId, historyServerId, addToast }) {
   const { t } = useTranslation();
@@ -157,7 +158,7 @@ export default function CommandHistory({ sessionId, historyServerId, addToast })
       {/* 标题行 */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <h3 style={{ margin: 0, fontSize: 16, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span>📜</span> {t('历史指令')}
+          <span style={{ display: 'inline-flex', alignItems: 'center' }}><ScrollText size={18} /></span> {t('历史指令')}
         </h3>
         {history.length > 0 && (
           <button className="btn btn-ghost btn-sm" onClick={clear} style={{ color: 'var(--text-4)' }}>
@@ -216,7 +217,7 @@ export default function CommandHistory({ sessionId, historyServerId, addToast })
       {/* 空状态 / 列表 */}
       {filteredHistory.length === 0 ? (
         <div className="empty-state" style={{ marginTop: '10vh' }}>
-          <div style={{ fontSize: 48, opacity: 0.3 }}>⌨️</div>
+          <div style={{ fontSize: 48, opacity: 0.3 }}><Keyboard size={48} /></div>
           <p style={{ marginTop: 16, color: 'var(--text-2)', fontSize: 15, fontWeight: 500 }}>
             {searchQuery ? t('未找到匹配的命令') : t('您还没有执行过任何命令')}
           </p>
@@ -239,13 +240,13 @@ export default function CommandHistory({ sessionId, historyServerId, addToast })
 
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: 10, marginTop: 6 }}>
                 <button className="btn btn-ghost btn-sm" onClick={() => copy(item.command)} style={{ fontSize: 12, padding: '4px 12px' }}>
-                  📋 {t('复制')}
+                  <Clipboard size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} /> {t('复制')}
                 </button>
                 <button className="btn btn-ghost btn-sm" onClick={() => deleteItem(item.id)} style={{ fontSize: 12, padding: '4px 12px', color: '#ff7b72' }}>
-                  🗑️ {t('删除')}
+                  <Trash2 size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} /> {t('删除')}
                 </button>
                 <button className="btn btn-primary btn-sm" onClick={() => exec(item.command)} style={{ fontSize: 12, padding: '4px 12px', background: 'var(--blue-dim)', color: 'var(--blue)', border: '1px solid rgba(88,166,255,0.2)' }}>
-                  🚀 {t('再次运行')}
+                  <Rocket size={13} style={{ marginRight: 4 }} /> {t('再次运行')}
                 </button>
               </div>
             </div>

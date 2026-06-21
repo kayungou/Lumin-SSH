@@ -1,4 +1,4 @@
-import { Monitor } from 'lucide-react';
+import { Monitor, Radio, Loader2 } from 'lucide-react';
 import { Z } from '../constants/zIndex';
 
 export default function ConnectingCard({ connectingServer, t, onCancel }) {
@@ -59,7 +59,7 @@ export default function ConnectingCard({ connectingServer, t, onCancel }) {
               animation: 'ssh-progress-indeterminate 1.4s ease-in-out infinite',
             }} />
           </div>
-          <div style={{ flexShrink: 0, fontSize: 14, color: '#22c55e' }}>📡</div>
+          <div style={{ flexShrink: 0, fontSize: 14, color: '#22c55e' }}><Radio size={14} /></div>
           <div style={{ flex: 1, height: 4, borderRadius: 4, background: 'rgba(255,255,255,0.08)', overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 4,
@@ -67,12 +67,12 @@ export default function ConnectingCard({ connectingServer, t, onCancel }) {
               animation: 'ssh-progress-indeterminate 1.4s ease-in-out 0.4s infinite',
             }} />
           </div>
-          <div style={{ flexShrink: 0, animation: 'spin 1.2s linear infinite', fontSize: 14, color: '#6e7681' }}>⟳</div>
+          <div style={{ flexShrink: 0, fontSize: 14, color: '#6e7681' }}><Loader2 size={14} style={{ animation: 'spin 1.2s linear infinite' }} /></div>
         </div>
 
         {/* 提示文字 */}
         <div style={{ fontSize: 12, color: '#6e7681', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ animation: 'spin 1.5s linear infinite', display: 'inline-block' }}>⟳</span>
+          <span style={{ animation: 'spin 1.5s linear infinite', display: 'inline-flex', alignItems: 'center' }}><Loader2 size={14} /></span>
           {t('正在建立 SSH 连接，请稍候...')}
         </div>
       </div>

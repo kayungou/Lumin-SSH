@@ -3,6 +3,21 @@
    Deep-space dark theme with neon blue/purple accents
    ============================================================ */
 
+/* Lucide 图标全局垂直居中对齐 */
+svg[class*="lucide"] {
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.btn-icon-spin.spinning svg {
+  animation: spin 1s linear infinite;
+}
+
 :root {
   color-scheme: dark;
   /* Backgrounds */
@@ -571,32 +586,42 @@ a { color: var(--blue); text-decoration: none; }
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 14px;
-  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  border-radius: 8px;
   font-size: 13px;
-  color: var(--text-3);
+  color: var(--text-2);
   cursor: pointer;
   white-space: nowrap;
   transition: var(--transition);
   position: relative;
   max-width: 200px;
-}
-.tab-item:hover { background: var(--bg-3); color: var(--text-1); }
-.tab-item.active {
   background: var(--bg-3);
+  border: 1px solid var(--text-4);
+  opacity: 0.7;
+}
+.tab-item:hover {
+  background: var(--bg-4);
   color: var(--text-1);
+  border-color: var(--text-3);
+  opacity: 1;
+}
+.tab-item.active {
+  background: var(--bg-4);
+  color: var(--text-1);
+  border-color: var(--green);
+  box-shadow: 0 0 0 1px var(--green);
+  opacity: 1;
 }
 .tab-item.active::after {
   content: '';
   position: absolute;
   bottom: -1px;
-  left: 0;
-  right: 0;
+  left: 16px;
+  right: 16px;
   height: 2px;
-  background: linear-gradient(90deg, var(--blue), var(--purple));
+  background: linear-gradient(90deg, #ec4899, #a855f7);
   border-radius: 2px 2px 0 0;
 }
-
 .tab-close {
   width: 18px;
   height: 18px;

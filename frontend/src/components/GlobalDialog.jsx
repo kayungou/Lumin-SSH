@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Clipboard } from 'lucide-react';
 import { useTranslation, t } from '../i18n.js';
 import { Z } from '../constants/zIndex';
 
@@ -171,7 +171,7 @@ function DialogContent({ current, onClose, onConfirm, onChoice }) {
               }}
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(88,166,255,0.12)'}
               onMouseLeave={e => e.currentTarget.style.background = 'none'}
-            >📋</button>
+            ><Clipboard size={16} /></button>
           </div>
           {current.checkboxLabel && (
             <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28, fontSize: 13, color: 'var(--text-3)', cursor: 'pointer' }}>

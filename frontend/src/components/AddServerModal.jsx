@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Pencil, Plus, X, Monitor, Key, FolderOpen, SquarePen } from 'lucide-react';
 import * as AppGo from '../../wailsjs/go/main/App.js';
 import { useTranslation } from '../i18n.js';
 
@@ -72,16 +72,16 @@ export default function AddServerModal({ server, onSave, onClose }) {
       <div className="modal modal-md">
         <div className="modal-header">
           <div className="modal-title">
-            <span>{server ? '✏️' : '➕'}</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center' }}>{server ? <SquarePen size={16} /> : <Plus size={16} />}</span>
             {server ? t('编辑配置') : t('添加')}
           </div>
-          <button className="btn btn-ghost btn-icon" onClick={onClose}>✕</button>
+          <button className="btn btn-ghost btn-icon" onClick={onClose}><X size={16} /></button>
         </div>
 
         <form onSubmit={handleSubmit}>
           <div className="modal-body">
             <div className="webdav-section">
-              <div className="webdav-section-title">🖥 {t('基本信息')}</div>
+              <div className="webdav-section-title"><span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 4 }}><Monitor size={16} /></span> {t('基本信息')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div className="form-group">
                   <label className="form-label">{t('服务器别名（选填）')}</label>
@@ -130,7 +130,7 @@ export default function AddServerModal({ server, onSave, onClose }) {
             </div>
 
             <div className="webdav-section">
-              <div className="webdav-section-title">🔑 {t('认证方式')}</div>
+              <div className="webdav-section-title"><span style={{ display: 'inline-flex', alignItems: 'center', marginRight: 4 }}><Key size={16} /></span> {t('认证方式')}</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div className="form-group">
                   <label className="form-label">{t('认证方式')}</label>
@@ -163,7 +163,7 @@ export default function AddServerModal({ server, onSave, onClose }) {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
                         <label className="form-label" style={{ marginBottom: 0 }}>{t('私钥内容')}</label>
                         <button type="button" className="btn-secondary btn-sm" onClick={handleSelectPrivateKeyFile} style={{ padding: '2px 8px', fontSize: 11 }}>
-                          📁 {t('浏览')}
+                          <FolderOpen size={12} style={{ verticalAlign: 'middle', marginRight: 2 }} /> {t('浏览')}
                         </button>
                       </div>
                       <textarea
