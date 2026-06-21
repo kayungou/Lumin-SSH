@@ -44,8 +44,6 @@ const OpenSuseIcon   = () => <img src="/openSUSE.ico" width="22" height="22" alt
 const NixosIcon      = () => <img src="/nixos.svg" width="22" height="22" alt="NixOS" />;
 const GentooIcon     = () => <img src="/gentoo.svg" width="22" height="22" alt="Gentoo" />;
 const AoscIcon       = () => <img src="/aosc.svg" width="22" height="22" alt="AOSC" />;
-const FnosIcon       = () => <img src="/fnOS.ico" width="22" height="22" alt="fnOS" />;
-const FygoosIcon     = () => <img src="/FygoOS.ico" width="22" height="22" alt="FygoOS" />;
 const RhelIcon       = () => <img src="/rhel.svg" width="22" height="22" alt="RHEL" />;
 const FedoraIcon     = () => <img src="/fedora.svg" width="22" height="22" alt="Fedora" />;
 const ArchIcon       = () => <img src="/arch.svg" width="22" height="22" alt="Arch" />;
@@ -77,8 +75,6 @@ const getOSInfo = (name = '', os = '', osInfo = null) => {
   if (n.includes('alpine'))       return { icon: <AlpineIcon />, bg: 'var(--bg-2)', label: 'Alpine' };
   if (n.includes('gentoo'))       return { icon: <GentooIcon />, bg: 'var(--bg-2)', label: 'Gentoo' };
   if (n.includes('aosc'))         return { icon: <AoscIcon />, bg: 'var(--bg-2)', label: 'AOSC' };
-  if (n.includes('fnos'))         return { icon: <FnosIcon />, bg: 'var(--bg-2)', label: 'fnOS' };
-  if (n.includes('fygoos'))       return { icon: <FygoosIcon />, bg: 'var(--bg-2)', label: 'FygoOS' };
   if (n.includes('freebsd'))      return { icon: <FreeBSDIcon />, bg: 'var(--bg-2)', label: 'FreeBSD' };
   // ── 非 Linux 系统 ──
   if (n.includes('windows'))      return { icon: <WinIcon />, bg: 'var(--bg-2)', label: 'Windows' };
