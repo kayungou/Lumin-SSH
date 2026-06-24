@@ -27,7 +27,7 @@ export default function ConnectingCard({ connectingServer, t, onCancel }) {
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 18 }}>
           <div style={{
             width: 42, height: 42, borderRadius: 10, flexShrink: 0,
-            background: 'linear-gradient(135deg,#ef4444,#dc2626)',
+            background: 'rgba(var(--danger-rgb), 0.85)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}><Monitor size={22} style={{ color: '#fff' }} /></div>
           <div style={{ flex: 1, minWidth: 0 }}>
@@ -42,7 +42,7 @@ export default function ConnectingCard({ connectingServer, t, onCancel }) {
             <button
               style={{
                 padding: '5px 14px', fontSize: 12, borderRadius: 8, cursor: 'pointer',
-                background: 'rgba(128,128,128,0.08)', border: '1px solid ' + C.btnBorder,
+                background: 'var(--surface-hover)', border: '1px solid ' + C.btnBorder,
                 color: C.statusBarColor,
               }}
               onClick={onCancel}

@@ -1,7 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo, useReducer } from 'react';
 import { EventsOn, WindowMinimise, WindowToggleMaximise, WindowHide, WindowShow, WindowSetSize, WindowGetSize } from '../wailsjs/runtime/runtime.js';
 import * as AppGo from '../wailsjs/go/main/App.js';
-import ServerList from './components/ServerList.jsx';
 import AddServerModal from './components/AddServerModal.jsx';
 import Terminal from './components/Terminal.jsx';
 import ErrorBoundary from './components/ErrorBoundary.jsx';
@@ -14,13 +13,16 @@ import GlobalDialog from './components/GlobalDialog.jsx';
 import GlobalContextMenu from './components/GlobalContextMenu.jsx';
 import { clampPanelWidth } from './components/probeFormatting.js';
 import { useTranslation } from './i18n.js';
+import { hexToRgb } from './utils/theme.js';
 import { useUpdateChecker } from './hooks/useUpdateChecker.js';
 import ConnectingCard from './components/ConnectingCard.jsx';
 import UpdateModal from './components/UpdateModal.jsx';
-import { Settings, House, Minus, Square, X, Eye, EyeOff, LayoutGrid, List, Search, Plus, Zap, BarChart3, Monitor, RefreshCw, FolderOpen, Terminal as TerminalIcon, Folder, ScrollText } from 'lucide-react';
+import Dashboard from './components/Dashboard.jsx';
+import { Settings, House, Minus, Square, X, Plus, Monitor, RefreshCw, Terminal as TerminalIcon, Folder, ScrollText } from 'lucide-react';
 import { Z } from './constants/zIndex';
 
 import logoImg from './assets/logo.png';
+
 
 export default function App() {
   const { t } = useTranslation();
@@ -64,6 +66,9 @@ export default function App() {
   const updateSessionStatus = useCallback((id, status) => {
     setSessions(prev => prev.map(s => s.id === id ? { ...s, status } : s));
   }, []);
+
+  // ponytail: 3 处 s.terminals?.length > 0 ? s.terminals : [{ id: s.id }] 提取为帮助函数
+  const getEffectiveTerminals = (s) => s.terminals?.length > 0 ? s.terminals : [{ id: s.id }];
   
   // ── 新增自动检测更新状态 ──────────────────────────────
   const [startupUpdateInfo, setStartupUpdateInfo] = useState(null);
@@ -235,8 +240,8 @@ export default function App() {
     const useCustomAccent = localStorage.getItem('useCustomAccent') === 'true';
     const themeAccent = localStorage.getItem('themeAccent');
     if (useCustomAccent && themeAccent) {
-      document.documentElement.style.setProperty('--success', themeAccent);
-      document.documentElement.style.setProperty('--green', themeAccent); // 兼容旧组件
+      document.body.style.setProperty('--accent', themeAccent);
+      document.body.style.setProperty('--accent-rgb', hexToRgb(themeAccent));
     }
 
     // 系统主题变化时自动跟随
@@ -802,32 +807,33 @@ export default function App() {
   }, [handleConnectError, reconnectSession]);
 
   // ── Close session ──────────────────────────────────────────
+  // ponytail: 内部关闭逻辑，不带确认弹窗，供 closeSession 和右键菜单共用
+  const forceCloseSession = useCallback((sessionId) => {
+    const session = sessionsRef.current.find(s => s.id === sessionId);
+    const termIds = session?.terminals ? session.terminals.map(t => t.id) : [sessionId];
+    termIds.forEach(id => {
+      cancelledConnectionsRef.current.add(id);
+      setTimeout(() => { cancelledConnectionsRef.current.delete(id); }, 30000);
+    });
+    for (const id of termIds) {
+      AppGo.DisconnectSSH(id).catch(() => {});
+    }
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    if (activeSessionId === sessionId) {
+      switchToNextSession(sessionId);
+    }
+    if (connectingServerRef.current?.sessionId === sessionId) {
+      setConnectingServer(null);
+    }
+  }, [activeSessionId]);
+
   const closeSession = useCallback(async (sessionId, e) => {
     e?.stopPropagation();
     const session = sessionsRef.current.find(s => s.id === sessionId);
     const name = session?.serverName || session?.name || session?.host || sessionId;
     if (!(await window.luminDialog?.confirm(`${t('确定关闭连接')}「${name}」？`))) return;
-    // 标记已取消，防止 connectServer/重连的 catch 仍弹错误提示
-    const termIds = session?.terminals ? session.terminals.map(t => t.id) : [sessionId];
-    termIds.forEach(id => {
-      cancelledConnectionsRef.current.add(id);
-      // 30 秒后自动清理，避免 Set 无限增长
-      setTimeout(() => { cancelledConnectionsRef.current.delete(id); }, 30000);
-    });
-    // 后端断开（不等待，即使服务器无响应也不阻塞 UI）
-    for (const id of termIds) {
-      AppGo.DisconnectSSH(id).catch(() => {});
-    }
-    // 立即从 UI 移除会话
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    if (activeSessionId === sessionId) {
-      switchToNextSession(sessionId);
-    }
-    // 如果正在连接中，也取消连接卡片
-    if (connectingServerRef.current?.sessionId === sessionId) {
-      setConnectingServer(null);
-    }
-  }, [activeSessionId]);
+    forceCloseSession(sessionId);
+  }, [forceCloseSession]);
 
   // ── 在当前服务器上新建终端标签 ──────────────────────────────
   const openNewTerminal = useCallback(async (sessionId) => {
@@ -1060,9 +1066,7 @@ export default function App() {
                         reconnectSession(s);
                       }}
                       title={t('重新连接')}
-                      style={{ cursor: 'pointer', opacity: 0.6, display: 'flex', alignItems: 'center', transition: 'opacity 0.2s' }}
-                      onMouseEnter={(e) => e.target.style.opacity = 1}
-                      onMouseLeave={(e) => e.target.style.opacity = 0.6}
+                      style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}
                     >
                       <RefreshCw size={12} />
                     </span>
@@ -1087,167 +1091,29 @@ export default function App() {
       {/* ── Main Area ─────────────────────────────────────── */}
       <main className="main-area">
         <div style={{ display: activeSessionId === null ? 'flex' : 'none', flex: 1, flexDirection: 'column', height: '100%' }}>
-          <div className="dashboard-container">
-            {/* 左半栏：快捷控制台 */}
-            <div className="dashboard-left">
-              {/* ⚡ 闪电直连卡片 */}
-              <div className="glass-card quick-connect-box">
-                <div className="card-header-icon-title">
-                  <span className="card-header-icon"><Zap size={18} /></span>
-                  <span className="card-header-title">{t('闪电直连')}</span>
-                </div>
-                <form onSubmit={handleQuickConnectDirect} className="quick-connect-form">
-                  <div className="form-group-compact">
-                    <label>{t('服务器别名（选填）')}</label>
-                    <input className="input-compact" placeholder={t('例如：我的测试服')} value={quickForm.name} onChange={e => dispatchQuick({ type: 'name', value: e.target.value })} />
-                  </div>
-                  <div className="form-group-compact">
-                    <label>{t('主机地址 *')}</label>
-                    <div className="form-row-compact">
-                      <input className="input-compact" style={{ flex: 3 }} placeholder="192.168.1.1" value={quickForm.host} onChange={e => dispatchQuick({ type: 'host', value: e.target.value })} required />
-                      <input className="input-compact" style={{ flex: 1.2 }} placeholder="22" value={quickForm.port} onChange={e => dispatchQuick({ type: 'port', value: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="form-group-compact">
-                    <label>{t('用户名')}</label>
-                    <input className="input-compact" placeholder="root" value={quickForm.user} onChange={e => dispatchQuick({ type: 'user', value: e.target.value })} />
-                  </div>
-                  <div className="form-group-compact">
-                    <label>{t('认证方式')}</label>
-                    <select className="select-compact" value={quickForm.auth} onChange={e => dispatchQuick({ type: 'auth', value: e.target.value })}>
-                      <option value="password">{t('密码认证')}</option>
-                      <option value="key">{t('私钥认证')}</option>
-                    </select>
-                  </div>
-                  {quickForm.auth === 'password' ? (
-                    <div className="form-group-compact" style={{ position: 'relative' }}>
-                      <label>{t('密码')}</label>
-                      <input className="input-compact" type={quickForm.showPass ? "text" : "password"} placeholder={t('请输入密码')} value={quickForm.pass} onChange={e => dispatchQuick({ type: 'pass', value: e.target.value })} style={{ paddingRight: 32 }} />
-                      <button type="button" aria-label={quickForm.showPass ? t('隐藏密码') : t('显示密码')} onClick={() => dispatchQuick({ type: 'showPass', value: !quickForm.showPass })} style={{ position: 'absolute', right: 6, bottom: 4, background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px', display: 'flex' }}>
-                        {quickForm.showPass ? <EyeOff size={14} /> : <Eye size={14} />}
-                      </button>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="form-group-compact">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                          <label style={{ marginBottom: 0 }}>{t('私钥内容')}</label>
-                          <button type="button" className="btn-text-action" onClick={handleQuickPrivateKeyFile}><FolderOpen size={14} /> {t('浏览')}</button>
-                        </div>
-                        <textarea className="textarea-compact" placeholder="-----BEGIN OPENSSH PRIVATE KEY-----" value={quickForm.key} onChange={e => dispatchQuick({ type: 'key', value: e.target.value })} />
-                      </div>
-                      <div className="form-group-compact" style={{ position: 'relative' }}>
-                        <label>{t('私钥密码短语 (可选)')}</label>
-                        <input className="input-compact" type={quickForm.showPassphrase ? "text" : "password"} placeholder={t('私钥密码短语')} value={quickForm.passphrase} onChange={e => dispatchQuick({ type: 'passphrase', value: e.target.value })} style={{ paddingRight: 32 }} />
-                        <button type="button" aria-label={quickForm.showPassphrase ? t('隐藏密码短语') : t('显示密码短语')} onClick={() => dispatchQuick({ type: 'showPassphrase', value: !quickForm.showPassphrase })} style={{ position: 'absolute', right: 6, bottom: 4, background: 'none', border: 'none', color: 'var(--text-tertiary)', cursor: 'pointer', padding: '4px', display: 'flex' }}>
-                          {quickForm.showPassphrase ? <EyeOff size={14} /> : <Eye size={14} />}
-                        </button>
-                      </div>
-                    </>
-                  )}
-                  <button type="submit" className="btn btn-primary btn-block" style={{ marginTop: 12 }}>{t('立即闪连')}</button>
-                 </form>
-               </div>
-
-              {/* 📊 状态概览 */}
-              <div className="glass-card status-overview-box">
-                <div className="card-header-icon-title">
-                  <span className="card-header-icon"><BarChart3 size={18} /></span>
-                  <span className="card-header-title">{t('系统状态')}</span>
-                  <button className={`btn-icon-spin ${isRefreshingPing ? 'spinning' : ''}`} onClick={handleRefreshPing} title={t('刷新延迟')} aria-label={t('刷新延迟')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, display: "flex", alignItems: "center" }}><RefreshCw size={14} /></button>
-                </div>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <div className="stat-val">{servers.length}</div>
-                    <div className="stat-lbl">{t('服务器总数')}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-val" style={{ color: 'var(--success)' }}>{pingCounts.online}</div>
-                    <div className="stat-lbl">{t('在线节点')}</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-val" style={{ color: 'var(--danger)' }}>{pingCounts.offline}</div>
-                    <div className="stat-lbl">{t('离线节点')}</div>
-                  </div>
-                </div>
-              </div>
-
-            </div>
-
-            {/* 右半栏：历史会话与主机目录 */}
-            <div className="dashboard-right">
-              {/* 🖥 全部主机目录 */}
-              <div className="hosts-section-container">
-                <div className="section-title-container">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: 1, minWidth: 0 }}>
-                    <span className="section-title-icon"><Monitor size={16} /></span>
-                    <span className="section-title">{t('主机')}</span>
-                    {/* 搜索框 */}
-                    <div style={{ position: 'relative', flex: 1, maxWidth: 280, minWidth: 120 }}>
-                      <Search size={13} style={{ position: 'absolute', left: 8, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', pointerEvents: 'none' }} />
-                      <input
-                        className="input-compact"
-                        placeholder={t('搜索服务器...')}
-                        value={searchQuery}
-                        onChange={e => setSearchQuery(e.target.value)}
-                        style={{ width: '100%', paddingLeft: 28, height: 30, fontSize: 12, borderRadius: 8, background: 'var(--surface-overlay)', border: '1px solid var(--border)' }}
-                      />
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 12 }}>
-                    {/* 视图切换 - 分段控件 */}
-                    <div className="segment-control">
-                      <button
-                        onClick={() => { setServerListViewMode('grid'); localStorage.setItem('serverListViewMode', 'grid'); }}
-                        title={t('卡片视图')}
-                        className={serverListViewMode === 'grid' ? 'active' : ''}
-                      >
-                        <LayoutGrid size={14} />
-                      </button>
-                      <div className="segment-control-divider" />
-                      <button
-                        onClick={() => { setServerListViewMode('table'); localStorage.setItem('serverListViewMode', 'table'); }}
-                        title={t('列表视图')}
-                        className={serverListViewMode === 'table' ? 'active' : ''}
-                      >
-                        <List size={14} />
-                      </button>
-                    </div>
-                    {/* 隐藏敏感信息 */}
-                    <button
-                      className="btn btn-ghost btn-icon"
-                      onClick={() => { const v = !hideSensitive; setHideSensitive(v); localStorage.setItem('hideSensitive', v); }}
-                      title={hideSensitive ? t('显示敏感信息') : t('隐藏敏感信息')}
-                      style={hideSensitive ? { background: 'var(--warning-dim)', color: 'var(--warning)', border: '1px solid var(--warning)' } : {}}
-                    >
-                      {hideSensitive ? <EyeOff size={14} /> : <Eye size={14} />}
-                    </button>
-                    {/* 添加按钮 */}
-                    <button
-                      className="btn btn-primary btn-sm"
-                      onClick={() => { setEditServer(null); setShowAddServer(true); }}
-                    >
-                      <Plus size={14} /> {t('添加')}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="hosts-scroll-area">
-                  <ServerList
-                    servers={filteredServers}
-                    pings={pings}
-                    sessions={sessions}
-                    activeSessionId={activeSessionId}
-                    viewMode={serverListViewMode}
-                    hideSensitive={hideSensitive}
-                    onConnect={connectServer}
-                    onEdit={(s) => { setEditServer(s); setShowAddServer(true); }}
-                    onDelete={handleDeleteServer}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
+          <Dashboard
+            quickForm={quickForm}
+            dispatchQuick={dispatchQuick}
+            onQuickConnect={handleQuickConnectDirect}
+            onQuickPrivateKeyFile={handleQuickPrivateKeyFile}
+            searchQuery={searchQuery}
+            onSearchChange={e => setSearchQuery(e.target.value)}
+            hideSensitive={hideSensitive}
+            onHideSensitiveToggle={() => { const v = !hideSensitive; setHideSensitive(v); localStorage.setItem('hideSensitive', v); }}
+            serverListViewMode={serverListViewMode}
+            onViewModeChange={(mode) => { setServerListViewMode(mode); localStorage.setItem('serverListViewMode', mode); }}
+            servers={servers}
+            pingCounts={pingCounts}
+            isRefreshingPing={isRefreshingPing}
+            onRefreshPing={handleRefreshPing}
+            filteredServers={filteredServers}
+            pings={pings}
+            sessions={sessions}
+            activeSessionId={activeSessionId}
+            onConnect={connectServer}
+            onEdit={(s) => { setEditServer(s); setShowAddServer(true); }}
+            onDelete={handleDeleteServer}
+          />
         </div>
 
         <div style={{ display: activeSessionId !== null ? 'flex' : 'none', flexDirection: 'column', height: '100%', flex: 1 }}>
@@ -1361,7 +1227,7 @@ export default function App() {
                           minWidth: 180,
                           flexShrink: 0,
                         }}>
-                          {(s.terminals?.length > 0 ? s.terminals : [{ id: s.id }]).map(t => (
+                          {getEffectiveTerminals(s).map(t => (
                             <div key={t.id} style={activeSessionId === s.id && activeTerminalId === t.id ? { display: 'contents' } : { display: 'none' }}>
                               <FileManager sessionId={t.id} addToast={addToast} isActive={activeSessionId === s.id && activeTerminalId === t.id} />
                             </div>
@@ -1400,7 +1266,7 @@ export default function App() {
                       </div>
                       {s.status === 'connected' && fileManagerPosition === 'tab' && mountedSessions.has(s.id) && (
                         <div style={{ display: contentTab === 'files' ? 'flex' : 'none', height: '100%', flex: 1, flexDirection: 'column' }}>
-                          {(s.terminals?.length > 0 ? s.terminals : [{ id: s.id }]).map(t => (
+                          {getEffectiveTerminals(s).map(t => (
                             <div key={t.id} style={activeSessionId === s.id && activeTerminalId === t.id ? { display: 'contents' } : { display: 'none' }}>
                               <FileManager sessionId={t.id} addToast={addToast} isActive={activeSessionId === s.id && activeTerminalId === t.id} />
                             </div>
@@ -1434,7 +1300,7 @@ export default function App() {
                           minHeight: 100,
                           flexShrink: 0,
                         }}>
-                          {(s.terminals?.length > 0 ? s.terminals : [{ id: s.id }]).map(t => (
+                          {getEffectiveTerminals(s).map(t => (
                             <div key={t.id} style={activeSessionId === s.id && activeTerminalId === t.id ? { display: 'contents' } : { display: 'none' }}>
                               <FileManager sessionId={t.id} addToast={addToast} isActive={activeSessionId === s.id && activeTerminalId === t.id} />
                             </div>
@@ -1562,22 +1428,7 @@ export default function App() {
               onClick={() => {
                 const sessionId = tabContextMenu.sessionId;
                 setTabContextMenu(null);
-                const session = sessionsRef.current.find(s => s.id === sessionId);
-                const termIds = session?.terminals ? session.terminals.map(t => t.id) : [sessionId];
-                termIds.forEach(id => {
-                  cancelledConnectionsRef.current.add(id);
-                  setTimeout(() => { cancelledConnectionsRef.current.delete(id); }, 30000);
-                });
-                for (const id of termIds) {
-                  AppGo.DisconnectSSH(id).catch(() => {});
-                }
-                setSessions(prev => prev.filter(s => s.id !== sessionId));
-                if (activeSessionId === sessionId) {
-                  switchToNextSession(sessionId);
-                }
-                if (connectingServerRef.current?.sessionId === sessionId) {
-                  setConnectingServer(null);
-                }
+                forceCloseSession(sessionId);
               }}
             >
               <X size={14} /> {t('关闭连接')}

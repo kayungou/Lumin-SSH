@@ -35,15 +35,10 @@ const iconBtnStyle = (color, bg) => ({
   transition: 'all 0.1s',
 });
 
-// ── 多套终端主题定义（每个主题含 dark/light 两套配色）─────────────
-
-
-// 获取当前终端主题（含 xterm 主题和容器颜色）
-
-
 export default function Terminal({ sessionId, serverId, historyServerId, status, isActive, serverName, connectedSessions = [] }) {
   const { t } = useTranslation();
   const containerRef   = useRef(null);
+  const wrapperRef     = useRef(null);
   const termRef        = useRef(null);
   const fitAddonRef    = useRef(null);
   const wsRef          = useRef(null);
@@ -404,8 +399,8 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
 
       // ── 按键累计记录命令（仅跟踪可打印字符，方向键和控制序列自动放弃）──
       if (data === '\r' || data === '\n' || data === '\r\n') {
-        // 密码输入不记入命令历史
-        if (!awaitingPassword) {
+        // 密码输入不记入命令历史；executeCommand 已记录则跳过
+        if (!awaitingPassword && !skipNextHistoryRef.current) {
           const cmd = pendingCmdRef.current.trim();
           if (cmd.length > 1 && !/^\d+$/.test(cmd)) {
             window.dispatchEvent(new CustomEvent('ssh-command-history', {
@@ -413,6 +408,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             }));
           }
         }
+        skipNextHistoryRef.current = false;
         awaitingPassword = false;
         pendingCmdRef.current = '';
       } else if (data === '\x7F' || data === '\b') {
@@ -568,15 +564,11 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
   // 同时监听 App 浅色/深色模式切换
   useEffect(() => {
     const handleThemeChange = () => {
-      if (termRef.current) {
-        termRef.current.options.theme = T.xterm;
-      }
+      // setThemeToggle 触发重渲染，让 useMemo 重新计算 T（从 localStorage 读取最新主题）
+      setThemeToggle(v => v + 1);
     };
     const handleModeChange = () => {
-      if (termRef.current) {
-        termRef.current.options.theme = T.xterm;
-      }
-      // 强制重新渲染以更新容器颜色
+      // 同上，触发重渲染以更新 xterm 主题 + 容器颜色
       setThemeToggle(v => v + 1);
     };
     window.addEventListener('terminal-theme-changed', handleThemeChange);
@@ -586,6 +578,33 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
       window.removeEventListener('theme-mode-changed', handleModeChange);
     };
   }, []);
+
+  // T 更新后同步 xterm 主题 + 容器 CSS 变量
+  useEffect(() => {
+    if (termRef.current) {
+      termRef.current.options.theme = T.xterm;
+    }
+    // ponytail: container 颜色走 CSS 变量，JSX 中不再直接引用 T.container
+    const el = wrapperRef.current;
+    if (el) {
+      const c = T.container;
+      el.style.setProperty('--term-container-bg', c.containerBg);
+      el.style.setProperty('--term-status-bg', c.statusBarBg);
+      el.style.setProperty('--term-status-border', c.statusBarBorder);
+      el.style.setProperty('--term-status-color', c.statusBarColor);
+      el.style.setProperty('--term-server-color', c.serverNameColor);
+      el.style.setProperty('--term-input-bar-bg', c.inputBarBg);
+      el.style.setProperty('--term-input-bar-border', c.inputBarBorder);
+      el.style.setProperty('--term-input-bg', c.inputBg);
+      el.style.setProperty('--term-input-color', c.inputColor);
+      el.style.setProperty('--term-btn-border', c.btnBorder);
+      el.style.setProperty('--term-separator', c.separator);
+      el.style.setProperty('--term-muted', c.mutedColor);
+      el.style.setProperty('--term-context-bg', c.contextBg);
+      el.style.setProperty('--term-context-border', c.contextBorder);
+      el.style.setProperty('--term-context-shadow', c.contextShadow);
+    }
+  }, [T]);
 
   // 监听快捷键 & 本地回显变更，同步更新 ref 缓存（保持设置即时生效）
   useEffect(() => {
@@ -775,10 +794,14 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
     cmdInputRef.current?.focus();
   };
 
+  // ponytail: 用于跳过 executeCommand 触发的 onData 回车（避免重复记录）
+  const skipNextHistoryRef = useRef(false);
+
   const executeCommand = (directCmd) => {
     const cmd = directCmd || cmdInput;
     if (!isConnected) return;
     const text = (cmd ?? '').trim();
+    skipNextHistoryRef.current = true; // 标记：下一次 onData(\r) 不记录
     AppGo.WriteTerminal(sessionId, text + '\r').catch((err) => {
       console.error('WriteTerminal failed:', err);
     });
@@ -809,7 +832,8 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
   };
 
   return (
-    <div 
+    <div
+      ref={wrapperRef}
       onContextMenu={handleContextMenu}
       onClick={closeContextMenu}
       style={{
@@ -817,7 +841,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: bgInfo.image ? 'transparent' : T.container.containerBg,
+        background: bgInfo.image ? 'transparent' : 'var(--term-container-bg)',
         overflow: 'hidden',
       }}
     >
@@ -841,11 +865,11 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         alignItems: 'center',
         gap: 8,
         padding: '8px 14px',
-        background: T.container.statusBarBg,
+        background: 'var(--term-status-bg)',
         backdropFilter: 'blur(8px)',
-        borderBottom: T.container.statusBarBorder,
+        borderBottom: 'var(--term-status-border)',
         fontSize: 12,
-        color: T.container.statusBarColor,
+        color: 'var(--term-status-color)',
         userSelect: 'none',
         flexShrink: 0,
       }}>
@@ -857,7 +881,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
           isError      ? 'offline' : '',
           !isConnected && !isConnecting && !isError ? 'offline' : '',
         ].filter(Boolean).join(' ')} style={{ flexShrink: 0 }} />
-        <span style={{ color: T.container.serverNameColor, fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
+        <span style={{ color: 'var(--term-server-color)', fontWeight: 500, fontFamily: 'var(--font-mono)' }}>
           {serverName || 'Terminal'}
         </span>
         
@@ -917,9 +941,9 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         alignItems: 'center',
         gap: 6,
         padding: '6px 10px',
-        background: T.container.inputBarBg,
+        background: 'var(--term-input-bar-bg)',
         backdropFilter: 'blur(8px)',
-        borderTop: T.container.inputBarBorder,
+        borderTop: 'var(--term-input-bar-border)',
         flexShrink: 0,
         position: 'relative',
       }}>
@@ -940,8 +964,8 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             fontFamily: "'JetBrains Mono', monospace",
             padding: '7px 10px',
             minHeight: 32,
-            background: T.container.inputBg,
-            borderColor: cmdInput ? 'rgba(var(--success-rgb), 0.3)' : T.container.btnBorder,
+            background: 'var(--term-input-bg)',
+            borderColor: cmdInput ? 'rgba(var(--success-rgb), 0.3)' : 'var(--term-btn-border)',
           }}
         />
 
@@ -1005,10 +1029,10 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             <div style={{
               display: 'flex', alignItems: 'center', justifyContent: 'space-between',
               padding: '8px 10px',
-              borderBottom: `1px solid ${T.container.separator}`,
+              borderBottom: '1px solid var(--term-separator)',
               flexShrink: 0,
             }}>
-              <span style={{ color: T.container.statusBarColor, fontSize: 11 }}>{t('历史命令')}</span>
+              <span style={{ color: 'var(--term-status-color)', fontSize: 11 }}>{t('历史命令')}</span>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                 <button
                   onClick={() => {
@@ -1036,7 +1060,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             {/* 历史列表（可滚动） */}
             <div ref={historyScrollRef} style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {filteredHistory.length === 0 ? (
-              <div style={{ padding: 20, textAlign: 'center', color: T.container.mutedColor, fontSize: 12 }}>
+              <div style={{ padding: 20, textAlign: 'center', color: 'var(--term-muted)', fontSize: 12 }}>
                 {searchQuery ? t('无匹配结果') : t('暂无历史记录')}
               </div>
             ) : displayHistory.map(item => (
@@ -1048,14 +1072,14 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                   padding: '6px 10px',
                   cursor: 'pointer',
-                  borderBottom: `1px solid ${T.container.separator}`,
+                  borderBottom: '1px solid var(--term-separator)',
                   transition: 'background 0.1s',
                 }}
               >
                 <span
                   style={{
                     flex: 1,
-                    color: T.container.inputColor,
+                    color: 'var(--term-input-color)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
                     whiteSpace: 'nowrap',
@@ -1098,7 +1122,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             <div style={{
               display: 'flex', gap: 6, alignItems: 'center',
               padding: '6px 10px',
-              borderTop: `1px solid ${T.container.separator}`,
+              borderTop: '1px solid var(--term-separator)',
               flexShrink: 0,
             }}>
               <input
@@ -1108,10 +1132,10 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
                 style={{
                   flex: 1,
                   padding: '4px 8px',
-                  background: T.container.inputBg,
-                  border: `1px solid ${T.container.btnBorder}`,
+                  background: 'var(--term-input-bg)',
+                  border: '1px solid var(--term-btn-border)',
                   borderRadius: 4,
-                  color: T.container.inputColor,
+                  color: 'var(--term-input-color)',
                   fontSize: 12,
                   outline: 'none',
                 }}
@@ -1119,11 +1143,11 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
               <button
                 onClick={() => setHistoryMode('server')}
                 style={{
-                  border: '1px solid ' + (historyMode === 'global' ? T.container.btnBorder : 'rgba(var(--accent-rgb), 0.3)'),
+                  border: '1px solid ' + (historyMode === 'global' ? 'var(--term-btn-border)' : 'rgba(var(--accent-rgb), 0.3)'),
                   borderRadius: 4,
                   padding: '3px 8px',
                   background: historyMode === 'server' ? 'rgba(var(--accent-rgb), 0.15)' : 'transparent',
-                  color: historyMode === 'server' ? 'var(--accent)' : T.container.mutedColor,
+                  color: historyMode === 'server' ? 'var(--accent)' : 'var(--term-muted)',
                   cursor: 'pointer', fontSize: 10,
                   whiteSpace: 'nowrap',
                 }}
@@ -1133,11 +1157,11 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
               <button
                 onClick={() => setHistoryMode('global')}
                 style={{
-                  border: '1px solid ' + (historyMode === 'server' ? T.container.btnBorder : 'rgba(var(--accent-rgb), 0.3)'),
+                  border: '1px solid ' + (historyMode === 'server' ? 'var(--term-btn-border)' : 'rgba(var(--accent-rgb), 0.3)'),
                   borderRadius: 4,
                   padding: '3px 8px',
                   background: historyMode === 'global' ? 'rgba(var(--accent-rgb), 0.15)' : 'transparent',
-                  color: historyMode === 'global' ? 'var(--accent)' : T.container.mutedColor,
+                  color: historyMode === 'global' ? 'var(--accent)' : 'var(--term-muted)',
                   cursor: 'pointer', fontSize: 10,
                   whiteSpace: 'nowrap',
                 }}
@@ -1171,10 +1195,10 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
             position: 'fixed',
             left: contextMenu.x,
             top: contextMenu.y,
-            backgroundColor: T.container.contextBg,
-            border: T.container.contextBorder,
+            backgroundColor: 'var(--term-context-bg)',
+            border: 'var(--term-context-border)',
             borderRadius: '8px',
-            boxShadow: T.container.contextShadow,
+            boxShadow: 'var(--term-context-shadow)',
             zIndex: Z.MODAL,
             padding: '4px 0',
             minWidth: '190px',

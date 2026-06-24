@@ -8,50 +8,50 @@ const TERMINAL_THEMES = {
     swatches: ['#22c55e', '#58a6ff', '#bc8cff', '#0d1117'],
     dark: {
       xterm: {
-        background: '#00000000', foreground: '#cdd9e5', cursor: '#22c55e',
-        cursorAccent: '#0d1117', selectionBackground: 'rgba(34,197,94,0.40)',
+        background: '#00000000', foreground: '#cdd9e5', cursor: '#4d9eff',
+        cursorAccent: '#0e1218', selectionBackground: 'rgba(77,158,255,0.35)',
         selectionForeground: '#ffffff',
-        black: '#484f58', red: '#ff7b72', green: '#3fb950', yellow: '#d29922',
+        black: '#484f58', red: '#ff7b72', green: '#3fb950', yellow: '#e6aa32',
         blue: '#58a6ff', magenta: '#bc8cff', cyan: '#39c5cf', white: '#b1bac4',
         brightBlack: '#6e7681', brightRed: '#ffa198', brightGreen: '#56d364',
         brightYellow: '#e3b341', brightBlue: '#79c0ff', brightMagenta: '#d2a8ff',
         brightCyan: '#56d4dd', brightWhite: '#f0f6fc',
       },
       container: {
-        containerBg: '#0d1117', statusBarBg: 'rgba(22,27,34,0.75)', statusBarBorder: '1px solid rgba(255,255,255,0.06)',
-        statusBarColor: '#8b949e', serverNameColor: '#cdd9e5',
-        inputBarBg: 'rgba(22,27,34,0.85)', inputBarBorder: '1px solid rgba(255,255,255,0.06)',
-        inputBg: 'rgba(13,17,23,0.8)', inputColor: '#cdd9e5', inputPlaceholder: '#484f58',
-        popupBg: '#161b22', popupBorder: '1px solid rgba(48,54,61,0.9)',
-        popupShadow: '0 -8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3)',
-        contextBg: '#161b22', contextBorder: '1px solid rgba(48,54,61,0.9)',
-        contextShadow: '0 8px 32px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.4)',
-        separator: 'rgba(255,255,255,0.06)', mutedColor: '#6e7681',
-        btnBorder: 'rgba(255,255,255,0.08)', btnMuted: '#484f58',
+        containerBg: '#0e1218', statusBarBg: 'rgba(19,25,34,0.80)', statusBarBorder: '1px solid rgba(77,158,255,0.08)',
+        statusBarColor: '#818fa0', serverNameColor: '#eaf0f7',
+        inputBarBg: 'rgba(19,25,34,0.88)', inputBarBorder: '1px solid rgba(77,158,255,0.08)',
+        inputBg: 'rgba(14,18,24,0.8)', inputColor: '#eaf0f7', inputPlaceholder: '#5a6578',
+        popupBg: '#131922', popupBorder: '1px solid rgba(56,68,90,0.8)',
+        popupShadow: '0 -8px 32px rgba(0,5,20,0.5), 0 2px 8px rgba(0,5,20,0.3)',
+        contextBg: '#131922', contextBorder: '1px solid rgba(56,68,90,0.8)',
+        contextShadow: '0 8px 32px rgba(0,5,20,0.6), 0 2px 8px rgba(0,5,20,0.4)',
+        separator: 'rgba(77,158,255,0.08)', mutedColor: '#5a6578',
+        btnBorder: 'rgba(77,158,255,0.1)', btnMuted: '#5a6578',
       },
     },
     light: {
       xterm: {
-        background: '#00000000', foreground: '#1f2328', cursor: '#0969da',
-        cursorAccent: '#ffffff', selectionBackground: 'rgba(9,105,218,0.30)',
+        background: '#00000000', foreground: '#1c1917', cursor: '#2563eb',
+        cursorAccent: '#fefdfb', selectionBackground: 'rgba(37,99,235,0.25)',
         selectionForeground: '#ffffff',
-        black: '#24292f', red: '#cf222e', green: '#1a7f37', yellow: '#9a6700',
-        blue: '#0969da', magenta: '#8250df', cyan: '#1b7c83', white: '#6e7781',
-        brightBlack: '#57606a', brightRed: '#a40e26', brightGreen: '#2da44e',
-        brightYellow: '#bf8700', brightBlue: '#218bff', brightMagenta: '#a475f9',
-        brightCyan: '#3192aa', brightWhite: '#8c959f',
+        black: '#292524', red: '#dc2626', green: '#16a34a', yellow: '#b45309',
+        blue: '#2563eb', magenta: '#7c3aed', cyan: '#0e7490', white: '#78716c',
+        brightBlack: '#57534e', brightRed: '#ef4444', brightGreen: '#22c55e',
+        brightYellow: '#eab308', brightBlue: '#3b82f6', brightMagenta: '#a78bfa',
+        brightCyan: '#22d3ee', brightWhite: '#a8a29e',
       },
       container: {
-        containerBg: '#ffffff', statusBarBg: 'rgba(246,248,250,0.92)', statusBarBorder: '1px solid rgba(0,0,0,0.08)',
-        statusBarColor: '#57606a', serverNameColor: '#1f2328',
-        inputBarBg: 'rgba(246,248,250,0.92)', inputBarBorder: '1px solid rgba(0,0,0,0.08)',
-        inputBg: 'rgba(246,248,250,0.9)', inputColor: '#1f2328', inputPlaceholder: '#8c959f',
-        popupBg: '#ffffff', popupBorder: '1px solid rgba(0,0,0,0.12)',
-        popupShadow: '0 -8px 32px rgba(0,0,0,0.1), 0 2px 8px rgba(0,0,0,0.06)',
-        contextBg: '#ffffff', contextBorder: '1px solid rgba(0,0,0,0.12)',
-        contextShadow: '0 8px 32px rgba(0,0,0,0.12), 0 2px 8px rgba(0,0,0,0.06)',
-        separator: 'rgba(0,0,0,0.08)', mutedColor: '#8c959f',
-        btnBorder: 'rgba(0,0,0,0.12)', btnMuted: '#8c959f',
+        containerBg: '#fefdfb', statusBarBg: 'rgba(244,241,238,0.92)', statusBarBorder: '1px solid rgba(60,50,40,0.1)',
+        statusBarColor: '#78716c', serverNameColor: '#1c1917',
+        inputBarBg: 'rgba(244,241,238,0.92)', inputBarBorder: '1px solid rgba(60,50,40,0.1)',
+        inputBg: 'rgba(244,241,238,0.9)', inputColor: '#1c1917', inputPlaceholder: '#a8a29e',
+        popupBg: '#fefdfb', popupBorder: '1px solid rgba(60,50,40,0.12)',
+        popupShadow: '0 -8px 32px rgba(28,25,23,0.1), 0 2px 8px rgba(28,25,23,0.06)',
+        contextBg: '#fefdfb', contextBorder: '1px solid rgba(60,50,40,0.12)',
+        contextShadow: '0 8px 32px rgba(28,25,23,0.12), 0 2px 8px rgba(28,25,23,0.06)',
+        separator: 'rgba(60,50,40,0.1)', mutedColor: '#a8a29e',
+        btnBorder: 'rgba(60,50,40,0.12)', btnMuted: '#a8a29e',
       },
     },
   },
@@ -226,3 +226,11 @@ export function getTerminalTheme() {
 }
 
 export { TERMINAL_THEMES };
+
+// ponytail: hex 颜色转 "r, g, b" 字符串，供 CSS rgba() 使用
+export function hexToRgb(hex) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `${r}, ${g}, ${b}`;
+}

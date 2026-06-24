@@ -963,6 +963,18 @@ export default function FileManager({ sessionId, addToast, isActive = true }) {
           <button className="btn btn-secondary btn-sm" onClick={handleUpload}>
             <Upload size={14} /> {t('上传文件')}
           </button>
+          {currentPath !== '/' && (
+            <button
+              className="btn btn-ghost btn-sm btn-icon"
+              title={tKey('返回上级')}
+              onClick={() => {
+                const parent = currentPath.substring(0, currentPath.lastIndexOf('/')) || '/';
+                loadDir(parent);
+              }}
+            >
+              <FolderUp size={14} />
+            </button>
+          )}
           <button
             className="btn btn-ghost btn-sm btn-icon"
             title={t('刷新')}

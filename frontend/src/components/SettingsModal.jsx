@@ -5,131 +5,19 @@ import { getModKey } from '../utils/platform.js';
 import logoImg from '../assets/logo.png';
 import { APP_VERSION } from '../config.js';
 import { useUpdateChecker } from '../hooks/useUpdateChecker.js';
-import { Sun, Monitor, Moon, Keyboard, Cloud, Info, Database, Folder, FolderOpen, Save, X, Lightbulb, RefreshCw, Globe, Palette, Lock, Plug, Sparkles } from 'lucide-react';
+import { Sun, Monitor, Moon, Keyboard, Cloud, Info, Database, Folder, X, RefreshCw, Globe, Palette, Lock } from 'lucide-react';
 import { Z } from '../constants/zIndex';
 import { WindowSetSize } from '../../wailsjs/runtime/runtime.js';
+import { hexToRgb } from '../utils/theme.js';
+import AppTab from './settings/AppTab';
+import NetworkTab from './settings/NetworkTab';
+import AppearanceTab from './settings/AppearanceTab';
+import ShortcutsTab from './settings/ShortcutsTab';
+import SyncTab from './settings/SyncTab';
 
 const TAB_ICON = { network: Globe, appearance: Palette, shortcuts: Keyboard, sync: Cloud, app: Info };
-const PROVIDER_ICON_CMP = { webdav: Cloud, r2: Database, ftp: Folder, sftp: Lock };
 
-const I18N = {
-  'zh-CN': {
-    title: '设置',
-    tabs: { network: '网络', appearance: '外观', shortcuts: '快捷键', sync: '同步与云', app: '关于' },
-    about: {
-      version: '版本',
-      reportTitle: '反馈问题',
-      reportDesc: '生成预填的 GitHub issue',
-      communityTitle: '社区',
-      communityDesc: '参与 GitHub Discussions 讨论',
-      githubTitle: 'GitHub',
-      githubDesc: '源代码',
-      changelogTitle: '更新内容',
-      changelogDesc: '查看发布说明',
-    },
-    network: {
-      pingProtocolTitle: '延迟检测协议',
-      pingProtocolDesc: '选择如何测量服务器网络延迟，不同协议适用于不同的网络环境。',
-      sshLabel: 'SSH Banner RTT',
-      sshDesc: '通过读取 SSH 握手包测速，穿透 TUN 代理测出真实网络延迟，推荐',
-      sshTag: '推荐',
-      tcpLabel: 'TCP Dial',
-      tcpDesc: '通过 TCP 连接建立测速，适用于局域网/私有网络或未开代理的环境',
-      tip: '如果您使用 TUN 模式代理（Clash/V2Ray），推荐使用 SSH Banner RTT 模式，可以穿透代理测出真实延迟。',
-      refreshTitle: '监控刷新频率',
-      refreshDesc: '设置探针数据和延迟测试的自动刷新间隔。越高的频率越实时，但资源占用越大。',
-      probeRefresh: '探针刷新间隔',
-      pingRefresh: '延迟检测间隔',
-      fixed30s: '2 秒（固定）',
-    },
-    appearance: {
-      langTitle: '语言',
-      langLabel: '语言',
-      langDesc: '选择界面语言',
-      termFontLabel: '终端字体大小',
-      termFontDesc: '调节终端的字符显示大小',
-      termEchoLabel: '终端输入回显',
-      termEchoDesc: '关闭后输入密码等敏感内容时不会显示字符',
-      themeTitle: '界面主题',
-      themeLabel: '主题',
-      themeDesc: '选择浅色、深色或跟随系统设置',
-      themeLight: '浅色',
-      themeSys: '系统',
-      themeDark: '深色',
-      accentTitle: '强调色',
-      accentLabel: '使用自定义强调色',
-      accentDesc: '覆盖主题自带的强调色',
-      termBgTitle: '终端背景',
-      termBgLabel: '自定义终端壁纸',
-      termBgDesc: '设置终端底部的自定义背景图片',
-      termBgOpacityLabel: '壁纸可见度',
-      termBgUpload: '上传图片',
-      termBgReset: '恢复默认',
-      windowSizeTitle: '窗口大小',
-      windowSizeLabel: '记住窗口大小',
-      windowSizeDesc: '下次启动时恢复上次调整的窗口尺寸',
-      windowSizeReset: '恢复默认大小',
-    }
-  },
-  'en-US': {
-    title: 'Settings',
-    tabs: { network: 'Network', appearance: 'Appearance', shortcuts: 'Shortcuts', sync: 'Sync & Cloud', app: 'About' },
-    about: {
-      version: 'Version',
-      reportTitle: 'Report an Issue',
-      reportDesc: 'Generate a pre-filled GitHub issue',
-      communityTitle: 'Community',
-      communityDesc: 'Join GitHub Discussions',
-      githubTitle: 'GitHub',
-      githubDesc: 'Source code',
-      changelogTitle: 'Changelog',
-      changelogDesc: 'View release notes',
-    },
-    network: {
-      pingProtocolTitle: 'Ping Protocol',
-      pingProtocolDesc: 'Choose how to measure server latency. Different protocols suit different networks.',
-      sshLabel: 'SSH Banner RTT',
-      sshDesc: 'Test via SSH handshake. Can penetrate TUN proxies to show real latency. Recommended.',
-      sshTag: 'Recommended',
-      tcpLabel: 'TCP Dial',
-      tcpDesc: 'Test via TCP connection. Best for LAN or non-proxied environments.',
-      tip: 'If using a TUN proxy (Clash/V2Ray), SSH Banner RTT is recommended to bypass the proxy and measure true latency.',
-      refreshTitle: 'Refresh Frequency',
-      refreshDesc: 'Set auto-refresh intervals for probe data and latency testing. Higher means more real-time, but uses more resources.',
-      probeRefresh: 'Probe Refresh Interval',
-      pingRefresh: 'Ping Interval',
-      fixed30s: '2 seconds (fixed)',
-    },
-    appearance: {
-      langTitle: 'Language',
-      langLabel: 'Language',
-      langDesc: 'Choose interface language',
-      termFontLabel: 'Terminal Font Size',
-      termFontDesc: 'Adjust terminal font size',
-      termEchoLabel: 'Terminal Input Echo',
-      termEchoDesc: 'When disabled, sensitive input like passwords will not be displayed',
-      themeTitle: 'Interface Theme',
-      themeLabel: 'Theme',
-      themeDesc: 'Choose Light, Dark or System',
-      themeLight: 'Light',
-      themeSys: 'System',
-      themeDark: 'Dark',
-      accentTitle: 'Accent Color',
-      accentLabel: 'Use Custom Accent',
-      accentDesc: 'Override default accent color',
-      termBgTitle: 'Terminal Background',
-      termBgLabel: 'Custom Wallpaper',
-      termBgDesc: 'Set custom background image for terminals',
-      termBgOpacityLabel: 'Wallpaper Visibility',
-      termBgUpload: 'Upload Image',
-      termBgReset: 'Reset Default',
-      windowSizeTitle: 'Window Size',
-      windowSizeLabel: 'Remember Window Size',
-      windowSizeDesc: 'Restore last window size on startup',
-      windowSizeReset: 'Reset to Default',
-    }
-  }
-};
+const TAB_LABELS = { network: '网络', appearance: '外观', shortcuts: '快捷键', sync: '同步与云', app: '关于' };
 
 const TABS = [
   { id: 'network' },
@@ -285,125 +173,6 @@ const PROVIDER_LIST = [
   { id: 'sftp', label: 'SFTP' },
 ];
 
-function ProviderCard({ provider, form, configured, editing, onEdit, onCancelEdit, testing, testResult, onTest, loading, onSave, children }) {
-  const accent = provider.accent;
-  const accentRgb = provider.accentRgb;
-  return (
-    <div style={{ background: 'var(--surface-overlay)', padding: 24, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
-        <div style={{ width: 40, height: 40, borderRadius: 8, background: 'var(--surface-sunken)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)' }}>{(() => { const IC = PROVIDER_ICON_CMP[Object.keys(PROVIDERS).find(k => PROVIDERS[k] === provider)]; return IC ? <IC size={20} /> : null; })()}</div>
-        <div>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{$t(provider.titleKey)}</div>
-          <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{$t(provider.subtitleKey)}</div>
-        </div>
-      </div>
-
-      {configured && !editing ? (
-        <div style={{
-          position: 'relative',
-          background: `linear-gradient(135deg, rgba(${accentRgb},0.05) 0%, var(--surface-raised) 100%)`,
-          border: `1px solid rgba(${accentRgb}, 0.2)`,
-          borderRadius: 'var(--radius-lg)',
-          padding: '24px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 20,
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
-        }}>
-          <div style={{
-            position: 'absolute', top: 0, left: 0, width: '4px', height: '100%',
-            background: accent,
-            boxShadow: `0 0 12px ${accent}`
-          }} />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 10, height: 10, borderRadius: '50%', background: accent, boxShadow: `0 0 10px ${accent}` }}></div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-primary)', letterSpacing: '0.3px' }}>{$t(provider.successMsgKey)}</div>
-            </div>
-            <button onClick={onEdit} style={{
-              padding: '6px 14px', borderRadius: 'var(--radius-sm)', fontSize: 13, fontWeight: 500,
-              background: 'var(--surface-hover)', border: '1px solid var(--border)', color: 'var(--text-secondary)',
-              cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', gap: 6
-            }}
-            onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--surface-sunken)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = 'var(--surface-hover)'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
-            >
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
-              {$t('修改配置')}
-            </button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginTop: '4px' }}>
-            {provider.summaryFields(form).map((sf, i) => (
-              <div key={i} style={{
-                display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--surface-overlay)',
-                padding: '12px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)',
-                ...(sf.fullWidth ? { gridColumn: '1 / -1' } : {})
-              }}>
-                <span style={{ fontSize: 12, color: 'var(--text-tertiary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: '0.5px' }}>{sf.label}</span>
-                <span style={{
-                  fontSize: 14, color: sf.primary ? 'var(--text-primary)' : 'var(--text-secondary)',
-                  fontWeight: sf.primary ? 600 : 400, fontFamily: 'var(--font-mono)',
-                  ...(sf.fullWidth ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : {})
-                }}>{sf.value}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {children}
-          <div style={{ display: 'flex', gap: 12, marginTop: 12, alignItems: 'center' }}>
-            <button className="btn btn-secondary" onClick={onTest} disabled={testing}>
-              {testing ? $t('测试中...') : <><Plug size={14} /> {$t('测试连接')}</>} {testResult === 'ok' && '✓'} {testResult === 'fail' && '✗'}
-            </button>
-            <button className="btn btn-primary" onClick={onSave} disabled={loading}>
-              {loading ? $t('保存中...') : <><Save size={14} /> {$t('保存配置')}</>}
-            </button>
-            {editing && (
-              <button className="btn btn-ghost" onClick={onCancelEdit} style={{ marginLeft: 'auto' }}>{$t('取消')}</button>
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// 快捷键行配置
-const SHORTCUT_ROWS = [
-  { labelKey: '从终端复制', key: 'copy' },
-  { labelKey: '粘贴到终端', key: 'paste' },
-  { labelKey: '清空终端缓冲区', key: 'clear' },
-  { labelKey: '新建本地标签页', key: 'newTab' },
-  { labelKey: '打断当前指令 (SIGINT)', key: 'sigint' },
-  { labelKey: '结束终端会话 (EOF)', key: 'eof' },
-  { labelKey: '后台挂起进程 (SIGTSTP)', key: 'suspend' },
-  { labelKey: '清空当前输入行', key: 'clearLine' },
-];
-
-// 单个快捷键行
-function ShortcutRow({ label, keyName, shortcuts, listeningKey, onSetListening, withBorder }) {
-  const isListening = listeningKey === keyName;
-  return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', ...(withBorder ? { borderBottom: '1px solid var(--border)' } : {}) }}>
-      <span style={{ color: 'var(--text-secondary)', fontSize: 13 }}>{label}</span>
-      <button
-        onClick={() => onSetListening(keyName)}
-        style={{
-          fontFamily: 'var(--font-mono)', fontSize: 12,
-          color: isListening ? 'var(--success)' : 'var(--text-tertiary)',
-          background: 'var(--surface-raised)', padding: '4px 12px', borderRadius: 4, cursor: 'pointer',
-          border: isListening ? '1px solid var(--success)' : '1px solid var(--border)',
-          transition: 'var(--transition)'
-        }}
-      >
-        {isListening ? $t('请按下快捷键...') : shortcuts[keyName]}
-      </button>
-    </div>
-  );
-}
-
 export default function SettingsModal({ onClose, addToast, onRestored }) {
   const CURRENT_VERSION = APP_VERSION;
   const [updateInfo, setUpdateInfo] = useState(null);
@@ -499,8 +268,6 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
   const [terminalLocalEcho, setTerminalLocalEcho] = useState(localStorage.getItem('terminalLocalEcho') === 'true');
   const [rememberWindowSize, setRememberWindowSize] = useState(localStorage.getItem('rememberWindowSize') !== 'false');
 
-  const t = I18N[language] || I18N['zh-CN'];
-
   // Shortcuts state
   const defaultShortcuts = {
     copy: 'Ctrl+C',
@@ -586,19 +353,12 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
     window.dispatchEvent(new CustomEvent('theme-mode-changed'));
   };
 
-  const hexToRgb = (hex) => {
-    const c = hex.replace('#', '');
-    return `${parseInt(c.slice(0,2), 16)}, ${parseInt(c.slice(2,4), 16)}, ${parseInt(c.slice(4,6), 16)}`;
-  };
-
   const handleColorChange = (color) => {
     setThemeAccent(color);
     localStorage.setItem('themeAccent', color);
     if (useCustomAccent) {
-      document.documentElement.style.setProperty('--accent', color);
-      document.documentElement.style.setProperty('--accent-rgb', hexToRgb(color));
-      document.documentElement.style.setProperty('--success', color);
-      document.documentElement.style.setProperty('--green', color);
+      document.body.style.setProperty('--accent', color);
+      document.body.style.setProperty('--accent-rgb', hexToRgb(color));
     }
   };
 
@@ -607,15 +367,11 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
     setUseCustomAccent(nextVal);
     localStorage.setItem('useCustomAccent', String(nextVal));
     if (nextVal) {
-      document.documentElement.style.setProperty('--accent', themeAccent);
-      document.documentElement.style.setProperty('--accent-rgb', hexToRgb(themeAccent));
-      document.documentElement.style.setProperty('--success', themeAccent);
-      document.documentElement.style.setProperty('--green', themeAccent);
+      document.body.style.setProperty('--accent', themeAccent);
+      document.body.style.setProperty('--accent-rgb', hexToRgb(themeAccent));
     } else {
-      document.documentElement.style.setProperty('--accent', null);
-      document.documentElement.style.setProperty('--accent-rgb', null);
-      document.documentElement.style.setProperty('--success', null);
-      document.documentElement.style.setProperty('--green', null);
+      document.body.style.setProperty('--accent', null);
+      document.body.style.setProperty('--accent-rgb', null);
     }
     addToast(nextVal ? $t('已启用自定义强调色') : $t('已恢复默认强调色'), 'success');
   };
@@ -624,7 +380,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
     const lang = e.target.value;
     setLanguage(lang);
     setGlobalLanguage(lang);
-    addToast($t('语言已切换至 简体中文'), 'success');
+    addToast(lang === 'en-US' ? 'Language switched to English' : $t('语言已切换至 简体中文'), 'success');
   };
 
   const handleTerminalFontChange = (e) => {
@@ -899,13 +655,22 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
     }
   };
 
+  // ── Tab prop wrappers ──
+  const handlePingProtocolChange = (id) => { setPingProtocol(id); localStorage.setItem('pingProtocol', id); };
+  const handleProbeIntervalChange = (s) => { setProbeInterval(s); localStorage.setItem('probeInterval', String(s)); window.dispatchEvent(new Event('probeIntervalChanged')); };
+  const handlePingIntervalChange = (s) => { setPingInterval(s); localStorage.setItem('pingInterval', String(s)); window.dispatchEvent(new Event('pingIntervalChanged')); };
+  const handleTerminalColorThemeChange = (key) => { setTerminalColorTheme(key); localStorage.setItem('terminalColorTheme', key); window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: key })); };
+  const handleSyncModeChange = async (mode) => { setSyncMode(mode); try { await AppGo.SetSyncMode(mode); } catch (_) {} };
+
+  const isAnyConfigured = isConfigured || r2Configured || ftpConfigured || sftpConfigured;
+
   return (
     <div className="modal-overlay">
       <div className="modal modal-xl" style={{ display: 'flex', flexDirection: 'column', height: '80vh', background: 'var(--surface-raised)' }}>
         
         {/* Settings Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 24px', borderBottom: '1px solid var(--border)' }}>
-          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{t.title}</div>
+          <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)' }}>{$t('设置')}</div>
           <button className="btn btn-ghost btn-icon" onClick={onClose} style={{ color: 'var(--text-secondary)' }}><X size={16} /></button>
         </div>
 
@@ -932,7 +697,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
                   gap: 8,
                 }}
               >
-                <span style={{ display: 'inline-flex', alignItems: 'center' }}>{(() => { const IC = TAB_ICON[tab.id]; return IC ? <IC size={16} /> : null; })()}</span> {t.tabs[tab.id]}
+                <span style={{ display: 'inline-flex', alignItems: 'center' }}>{(() => { const IC = TAB_ICON[tab.id]; return IC ? <IC size={16} /> : null; })()}</span> {$t(TAB_LABELS[tab.id])}
               </div>
             ))}
           </div>
@@ -941,817 +706,117 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
           <div style={{ flex: 1, padding: '32px 48px', overflowY: 'auto', background: 'var(--surface-raised)' }}>
             
             {activeTab === 'app' && (
-              <div style={{ display: 'flex', flexDirection: 'column', padding: '16px 24px', gap: 32, maxWidth: 640 }}>
-                {/* 顶部布局：图标与标题 */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-                  <img 
-                    src={logoImg} 
-                    alt="Lumin" 
-                    style={{ 
-                      width: 96, 
-                      height: 96, 
-                      borderRadius: 24, 
-                      boxShadow: '0 12px 28px rgba(0, 0, 0, 0.25)',
-                      border: '1px solid var(--border-light)'
-                    }}
-                  />
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <div style={{ 
-                      fontSize: 32, 
-                      fontWeight: 800, 
-                      color: 'var(--text-primary)',
-                      letterSpacing: '-0.5px',
-                      display: 'flex',
-                      alignItems: 'baseline',
-                      gap: 8
-                    }}>
-                      Lumin
-                      <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-tertiary)', letterSpacing: '0' }}>by WuMing</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <span style={{ fontSize: 14, color: 'var(--text-secondary)', fontFamily: 'var(--font-mono)' }}>
-                        {CURRENT_VERSION}
-                      </span>
-                      {updateInfo?.hasUpdate && (
-                        <span 
-                          onClick={handleApplyUpdate}
-                          style={{ 
-                            background: downloadProgress >= 0 ? '#1e3a8a' : '#065f46', 
-                            color: downloadProgress >= 0 ? '#93c5fd' : '#34d399', 
-                            borderRadius: 12, 
-                            padding: '2px 8px', 
-                            fontSize: 12, 
-                            fontWeight: 600,
-                            cursor: downloadProgress >= 0 ? 'default' : 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 4,
-                            boxShadow: downloadProgress >= 0 ? '0 2px 8px rgba(30,58,138,0.3)' : '0 2px 8px rgba(6,95,70,0.3)',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            minWidth: 80,
-                            justifyContent: 'center'
-                          }}
-                        >
-                          {downloadProgress >= 0 && (
-                            <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, background: 'rgba(59, 130, 246, 0.4)', width: `${downloadProgress}%`, transition: 'width 0.2s ease-out' }}></div>
-                          )}
-                          <span style={{ position: 'relative', zIndex: Z.CONTENT, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            {downloadProgress >= 0 ? (
-                               <>
-                                 <svg className="spin" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
-                                 {downloadProgress}%
-                               </>
-                            ) : (
-                               <>
-                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
-                                 {updateInfo.latestVersion} {$t('立即更新')}
-                               </>
-                            )}
-                          </span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ marginTop: 0 }}>
-                  <button 
-                    onClick={handleCheckUpdate}
-                    disabled={checkingUpdate}
-                    style={{ 
-                      background: 'var(--surface-overlay)', 
-                      color: 'var(--text-secondary)', 
-                      border: '1px solid var(--border)', 
-                      borderRadius: 8, 
-                      padding: '6px 16px', 
-                      fontSize: 13, 
-                      fontWeight: 500,
-                      cursor: checkingUpdate ? 'not-allowed' : 'pointer',
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 6,
-                      transition: 'all 0.2s',
-                      opacity: checkingUpdate ? 0.7 : 1
-                    }}
-                    onMouseEnter={(e) => { if(!checkingUpdate) { e.currentTarget.style.background = 'var(--surface-sunken)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
-                    onMouseLeave={(e) => { if(!checkingUpdate) { e.currentTarget.style.background = 'var(--surface-overlay)'; e.currentTarget.style.color = 'var(--text-secondary)'; } }}
-                  >
-                    <svg className={checkingUpdate ? 'spin' : ''} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 2v6h-6"></path><path d="M3 12a9 9 0 0 1 15-6.7L21 8"></path><path d="M3 22v-6h6"></path><path d="M21 12a9 9 0 0 1-15 6.7L3 16"></path></svg>
-                    {checkingUpdate
-                       ? $t('检查中...')
-                       : $t('检查更新')}
-                  </button>
-                </div>
-
-                {/* 列表项 */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 12 }}>
-                  <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH/issues/new')}
-                    className="about-list-item"
-                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--surface-overlay)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-sunken)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-overlay)'}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M9 15L15 15"></path><path d="M12 12L12 18"></path></svg>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.about.reportTitle}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t.about.reportDesc}</span>
-                    </div>
-                  </div>
-
-                  <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH/discussions')}
-                    className="about-list-item"
-                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--surface-overlay)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-sunken)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-overlay)'}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.about.communityTitle}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t.about.communityDesc}</span>
-                    </div>
-                  </div>
-
-                  <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH')}
-                    className="about-list-item"
-                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--surface-overlay)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-sunken)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-overlay)'}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"></path></svg>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.about.githubTitle}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t.about.githubDesc}</span>
-                    </div>
-                  </div>
-
-                  <div 
-                    onClick={() => window.runtime?.BrowserOpenURL('https://github.com/wmwlwmwl/Lumin-SSH/releases')}
-                    className="about-list-item"
-                    style={{ display: 'flex', alignItems: 'center', gap: 16, padding: '16px', borderRadius: 'var(--radius-md)', cursor: 'pointer', transition: 'all 0.2s', background: 'var(--surface-overlay)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = 'var(--surface-sunken)'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = 'var(--surface-overlay)'}
-                  >
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-secondary)' }}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-                    <div style={{ display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{t.about.changelogTitle}</span>
-                      <span style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t.about.changelogDesc}</span>
-                    </div>
-                  </div>
-
-                </div>
-              </div>
+              <AppTab
+                CURRENT_VERSION={CURRENT_VERSION}
+                updateInfo={updateInfo}
+                checkingUpdate={checkingUpdate}
+                downloadProgress={downloadProgress}
+                onCheckUpdate={handleCheckUpdate}
+                onApplyUpdate={handleApplyUpdate}
+              />
             )}
 
             {activeTab === 'network' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                {/* 延迟检测协议 */}
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{t.network.pingProtocolTitle}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{t.network.pingProtocolDesc}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {[
-                      { id: 'ssh', label: t.network.sshLabel, desc: t.network.sshDesc, tag: t.network.sshTag },
-                      { id: 'tcp', label: t.network.tcpLabel, desc: t.network.tcpDesc },
-                    ].map(opt => (
-                      <div
-                        key={opt.id}
-                        onClick={() => { setPingProtocol(opt.id); localStorage.setItem('pingProtocol', opt.id); }}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px',
-                          background: pingProtocol === opt.id ? 'rgba(34,197,94,0.06)' : 'var(--surface-overlay)',
-                          border: `1px solid ${pingProtocol === opt.id ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
-                          borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
-                        }}
-                      >
-                        <div style={{
-                          width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                          border: `2px solid ${pingProtocol === opt.id ? 'var(--success)' : 'var(--border)'}`,
-                          background: pingProtocol === opt.id ? 'var(--success)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          {pingProtocol === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</span>
-                            {opt.tag && <span style={{ fontSize: 10, background: 'rgba(34,197,94,0.15)', border: '1px solid rgba(34,197,94,0.4)', color: 'var(--success)', padding: '1px 6px', borderRadius: 4, fontWeight: 700 }}>{opt.tag}</span>}
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>{opt.desc}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ marginTop: 12, padding: '10px 14px', background: 'var(--surface-overlay)', borderRadius: 8, fontSize: 12, color: 'var(--text-tertiary)', lineHeight: 1.7, border: '1px solid var(--border-light)' }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', verticalAlign: 'middle', marginRight: 4 }}><Lightbulb size={14} /></span> <strong style={{ color: 'var(--text-secondary)' }}>{$t('提示：')}</strong>{t.network.tip}
-                  </div>
-                </div>
-
-                {/* 监控刷新频率 */}
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>{t.network.refreshTitle}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20 }}>{t.network.refreshDesc}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t.network.probeRefresh}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {[1, 3, 5, 10, 30].map(s => (
-                          <button
-                            key={s}
-                            onClick={() => { setProbeInterval(s); localStorage.setItem('probeInterval', String(s)); window.dispatchEvent(new Event('probeIntervalChanged')); }}
-                            style={{
-                              padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid',
-                              borderColor: probeInterval === s ? 'var(--success)' : 'var(--border)',
-                              background: probeInterval === s ? 'rgba(34,197,94,0.1)' : 'var(--surface-sunken)',
-                              color: probeInterval === s ? 'var(--success)' : 'var(--text-secondary)',
-                              transition: 'all 0.15s',
-                            }}
-                          >{s}s</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>{t.network.pingRefresh}</span>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        {[2, 5, 10, 30].map(s => (
-                          <button
-                            key={s}
-                            onClick={() => {
-                              setPingInterval(s);
-                              localStorage.setItem('pingInterval', String(s));
-                              window.dispatchEvent(new Event('pingIntervalChanged'));
-                            }}
-                            style={{
-                              padding: '4px 12px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid',
-                              borderColor: pingInterval === s ? 'var(--success)' : 'var(--border)',
-                              background: pingInterval === s ? 'rgba(34,197,94,0.1)' : 'var(--surface-sunken)',
-                              color: pingInterval === s ? 'var(--success)' : 'var(--text-secondary)',
-                              transition: 'all 0.15s',
-                            }}
-                          >{s}s</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
+              <NetworkTab
+                pingProtocol={pingProtocol}
+                onPingProtocolChange={(id) => { setPingProtocol(id); localStorage.setItem('pingProtocol', id); }}
+                probeInterval={probeInterval}
+                onProbeIntervalChange={(s) => { setProbeInterval(s); localStorage.setItem('probeInterval', String(s)); window.dispatchEvent(new Event('probeIntervalChanged')); }}
+                pingInterval={pingInterval}
+                onPingIntervalChange={(s) => { setPingInterval(s); localStorage.setItem('pingInterval', String(s)); window.dispatchEvent(new Event('pingIntervalChanged')); }}
+              />
             )}
             {activeTab === 'appearance' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{t.appearance.langTitle}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.langLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.langDesc}</div>
-                      </div>
-                      <select className="select" style={{ width: 200 }} value={language} onChange={handleLanguageChange}>
-                        <option value="zh-CN">简体中文</option>
-                        <option value="en-US">English</option>
-                      </select>
-                    </div>
-                    <div className="divider" style={{ margin: '12px 0', borderTop: '1px solid var(--border)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.termFontLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.termFontDesc}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <input
-                          type="range"
-                          min="10"
-                          max="28"
-                          step="1"
-                          value={terminalFontSize}
-                          onChange={handleTerminalFontChange}
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: 13, width: 32, textAlign: 'right', color: 'var(--text-primary)' }}>{terminalFontSize}px</span>
-                      </div>
-                    </div>
-                    <div className="divider" style={{ margin: '12px 0', borderTop: '1px solid var(--border)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.termEchoLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.termEchoDesc}</div>
-                      </div>
-                      <label className="toggle-switch" style={{ position: 'relative', display: 'inline-block', width: 40, height: 22 }}>
-                        <input
-                          type="checkbox"
-                          checked={terminalLocalEcho}
-                          onChange={(e) => handleTerminalLocalEchoChange(e.target.checked)}
-                          style={{ opacity: 0, width: 0, height: 0 }}
-                        />
-                        <span style={{
-                          position: 'absolute',
-                          cursor: 'pointer',
-                          inset: 0,
-                          background: terminalLocalEcho ? 'var(--success)' : 'var(--surface-sunken)',
-                          borderRadius: 22,
-                          transition: 'background 0.2s',
-                        }}>
-                          <span style={{
-                            position: 'absolute',
-                            height: 18,
-                            width: 18,
-                            left: terminalLocalEcho ? 20 : 2,
-                            bottom: 2,
-                            background: 'white',
-                            borderRadius: '50%',
-                            transition: 'left 0.2s',
-                          }} />
-                        </span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* ── 终端颜色主题 ── */}
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{$t('终端颜色主题')}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ color: 'var(--text-tertiary)', fontSize: 11, marginBottom: 12 }}>{$t('选择终端的配色风格，即时生效')}</div>
-                    <div className="theme-palette-grid">
-                      {[
-                        { key: 'lumin',       name: 'Lumin Default', swatches: ['var(--success)', '#58a6ff', '#bc8cff', '#0d1117'] },
-                        { key: 'tokyo-night', name: 'Tokyo Night',   swatches: ['#7aa2f7', '#bb9af7', '#73daca', '#1a1b26'] },
-                        { key: 'catppuccin',  name: 'Catppuccin',    swatches: ['#cba6f7', '#89b4fa', '#a6e3a1', '#1e1e2e'] },
-                        { key: 'dracula',     name: 'Dracula',       swatches: ['#ff79c6', '#bd93f9', '#50fa7b', '#282a36'] },
-                      ].map(({ key, name, swatches }) => (
-                        <div
-                          key={key}
-                          className={`theme-palette-card${terminalColorTheme === key ? ' active' : ''}`}
-                          onClick={() => {
-                            setTerminalColorTheme(key);
-                            localStorage.setItem('terminalColorTheme', key);
-                            window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: key }));
-                          }}
-                        >
-                          <div className="theme-palette-swatches">
-                            {swatches.map((c, i) => (
-                              <div key={i} className="theme-palette-swatch" style={{ background: c }} />
-                            ))}
-                          </div>
-                          <div className="theme-palette-name">{name}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{t.appearance.themeTitle}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.themeLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.themeDesc}</div>
-                      </div>
-                      <div style={{ display: 'flex', background: 'var(--surface-raised)', borderRadius: 'var(--radius-xl)', padding: 4, border: '1px solid var(--border)' }}>
-                        <button className={`btn btn-sm ${themeMode === 'light' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('light')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'light' ? 'var(--surface-sunken)' : 'transparent', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Sun size={14} />{t.appearance.themeLight}</button>
-                        <button className={`btn btn-sm ${themeMode === 'system' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('system')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'system' ? 'var(--surface-sunken)' : 'transparent', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Monitor size={14} />{t.appearance.themeSys}</button>
-                        <button className={`btn btn-sm ${themeMode === 'dark' ? 'btn-secondary' : 'btn-ghost'}`} onClick={() => handleThemeChange('dark')} style={{ borderRadius: 'var(--radius-xl)', background: themeMode === 'dark' ? 'var(--surface-sunken)' : 'transparent', display: 'inline-flex', alignItems: 'center', gap: 4 }}><Moon size={14} />{t.appearance.themeDark}</button>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{t.appearance.accentTitle}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.accentLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.accentDesc}</div>
-                      </div>
-                      <div 
-                        onClick={handleToggleAccent}
-                        style={{ 
-                          width: 40, height: 24, 
-                          background: useCustomAccent ? 'var(--success)' : 'var(--surface-hover)', 
-                          borderRadius: 12, position: 'relative', cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                          border: '1px solid var(--border)'
-                        }}
-                      >
-                        <div style={{ 
-                          position: 'absolute', 
-                          left: useCustomAccent ? 18 : 2, 
-                          top: 1, width: 20, height: 20, 
-                          background: '#fff', borderRadius: '50%',
-                          transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
-                        }}></div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                      {['#3b82f6','#8b5cf6','#d946ef','#f43f5e','#f97316','#eab308','#84cc16','#10b981','#06b6d4','#64748b'].map((color, i) => (
-                        <div key={i} onClick={() => handleColorChange(color)} style={{ 
-                          width: 24, height: 24, borderRadius: '50%', background: color, cursor: 'pointer',
-                          border: themeAccent === color ? '2px solid #fff' : 'none',
-                          boxShadow: themeAccent === color ? `0 0 0 2px ${color}` : 'none'
-                        }} />
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{t.appearance.termBgTitle}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.termBgLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.termBgDesc}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        {termBgImage && (
-                          <button className="btn btn-ghost btn-sm" onClick={handleTermBgReset} style={{ fontSize: 12, color: 'var(--text-secondary)' }}>
-                            {t.appearance.termBgReset}
-                          </button>
-                        )}
-                        <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', fontSize: 12, borderRadius: 'var(--radius-sm)' }}>
-                          {t.appearance.termBgUpload}
-                          <input type="file" accept="image/*" style={{ display: 'none' }} onChange={handleTermBgUpload} />
-                        </label>
-                      </div>
-                    </div>
-                    <div className="divider" style={{ margin: '12px 0', borderTop: '1px solid var(--border)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.termBgOpacityLabel}</div>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <input 
-                          type="range" 
-                          min="0.0" 
-                          max="1.0" 
-                          step="0.05" 
-                          value={termBgOpacity} 
-                          onChange={handleTermBgOpacityChange} 
-                          style={{ cursor: 'pointer' }}
-                        />
-                        <span style={{ fontSize: 13, width: 32, textAlign: 'right', color: 'var(--text-primary)' }}>{Math.round(termBgOpacity * 100)}%</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{t.appearance.windowSizeTitle}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', padding: 16, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div>
-                        <div style={{ color: 'var(--text-primary)', fontSize: 13 }}>{t.appearance.windowSizeLabel}</div>
-                        <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.windowSizeDesc}</div>
-                      </div>
-                      <div
-                        onClick={handleToggleRememberWindowSize}
-                        style={{
-                          width: 40, height: 24,
-                          background: rememberWindowSize ? 'var(--success)' : 'var(--surface-hover)',
-                          borderRadius: 12, position: 'relative', cursor: 'pointer',
-                          transition: 'background 0.2s ease',
-                          border: '1px solid var(--border)'
-                        }}
-                      >
-                        <div style={{
-                          position: 'absolute',
-                          left: rememberWindowSize ? 18 : 2,
-                          top: 1, width: 20, height: 20,
-                          background: '#fff', borderRadius: '50%',
-                          transition: 'left 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                          boxShadow: '0 1px 3px rgba(0,0,0,0.4)'
-                        }}></div>
-                      </div>
-                    </div>
-                    <div className="divider" style={{ margin: '12px 0', borderTop: '1px solid var(--border)' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ color: 'var(--text-tertiary)', fontSize: 11 }}>{t.appearance.windowSizeDesc}</div>
-                      <button className="btn btn-secondary btn-sm" onClick={handleResetWindowSize} style={{ fontSize: 12, borderRadius: 'var(--radius-sm)' }}>
-                        {t.appearance.windowSizeReset}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
+              <AppearanceTab
+                language={language}
+                onLanguageChange={handleLanguageChange}
+                terminalFontSize={terminalFontSize}
+                onTerminalFontSizeChange={handleTerminalFontChange}
+                terminalLocalEcho={terminalLocalEcho}
+                onTerminalLocalEchoChange={handleTerminalLocalEchoChange}
+                terminalColorTheme={terminalColorTheme}
+                onTerminalColorThemeChange={(key) => { setTerminalColorTheme(key); localStorage.setItem('terminalColorTheme', key); window.dispatchEvent(new CustomEvent('terminal-theme-changed', { detail: key })); }}
+                themeMode={themeMode}
+                onThemeChange={handleThemeChange}
+                themeAccent={themeAccent}
+                onColorChange={handleColorChange}
+                useCustomAccent={useCustomAccent}
+                onToggleAccent={handleToggleAccent}
+                termBgImage={termBgImage}
+                onTermBgUpload={handleTermBgUpload}
+                onTermBgReset={handleTermBgReset}
+                termBgOpacity={termBgOpacity}
+                onTermBgOpacityChange={handleTermBgOpacityChange}
+                rememberWindowSize={rememberWindowSize}
+                onToggleRememberWindowSize={handleToggleRememberWindowSize}
+                onResetWindowSize={handleResetWindowSize}
+              />
             )}
 
             {activeTab === 'shortcuts' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                <div>
-                  <h3 style={{ fontSize: 14, color: 'var(--text-primary)', marginBottom: 12, fontWeight: 600 }}>{$t('终端快捷键')}</h3>
-                  <div className="form-group" style={{ background: 'var(--surface-overlay)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                    {SHORTCUT_ROWS.map((row, idx) => (
-                      <ShortcutRow
-                        key={row.key}
-                        label={$t(row.labelKey)}
-                        keyName={row.key}
-                        shortcuts={shortcuts}
-                        listeningKey={listeningKey}
-                        onSetListening={setListeningKey}
-                        withBorder={idx < SHORTCUT_ROWS.length - 1}
-                      />
-                    ))}
-                  </div>
-                  <p style={{ marginTop: 12, fontSize: 12, color: 'var(--text-tertiary)' }}>{$t('注：部分快捷键行为受终端内的 Shell 设置影响。')}</p>
-                </div>
-              </div>
+              <ShortcutsTab shortcuts={shortcuts} listeningKey={listeningKey} onSetListeningKey={setListeningKey} />
             )}
 
             {activeTab === 'sync' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-                
-                {/* Provider Selector */}
-                <div style={{ display: 'flex', gap: 8, background: 'var(--surface-overlay)', padding: 8, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  {PROVIDER_LIST.map(p => (
-                    <button
-                      key={p.id}
-                      onClick={() => setSyncProvider(p.id)}
-                      style={{
-                        flex: 1, padding: '10px 16px', borderRadius: 'var(--radius-sm)',
-                        background: syncProvider === p.id ? 'var(--surface-raised)' : 'transparent',
-                        border: syncProvider === p.id ? '1px solid var(--border)' : '1px solid transparent',
-                        color: syncProvider === p.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                        fontWeight: syncProvider === p.id ? 600 : 400,
-                        cursor: 'pointer', fontSize: 14, transition: 'all 0.15s',
-                        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                      }}
-                    >
-                      {(() => { const IC = PROVIDER_ICON_CMP[p.id]; return IC ? <IC size={16} /> : null; })()} {p.label}
-                    </button>
-                  ))}
-                </div>
-
-                {/* WebDAV Config */}
-                {syncProvider === 'webdav' && (
-                  <ProviderCard
-                    provider={PROVIDERS.webdav}
-                    form={webdavForm}
-                    configured={isConfigured}
-                    editing={isEditing}
-                    onEdit={() => setIsEditing(true)}
-                    onCancelEdit={() => setIsEditing(false)}
-                    testing={testing}
-                    testResult={testResult}
-                    onTest={handleTest}
-                    loading={loading}
-                    onSave={handleSave}
-                  >
-                    <div className="form-group">
-                      <label className="form-label">{$t('端点地址 (URL)')}</label>
-                      <input className="input" value={webdavForm.url} onChange={setWebdav('url')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('用户名')}</label>
-                      <input className="input" value={webdavForm.username} onChange={setWebdav('username')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('密码 / 授权码')}</label>
-                      <input className="input" type="password" value={webdavForm.password} onChange={setWebdav('password')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('远程保存目录')}</label>
-                      <input className="input" value={webdavForm.remotePath} onChange={setWebdav('remotePath')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('保留份数 (0=不限)')}</label>
-                      <input className="input" type="number" min="0" value={webdavForm.maxBackups} onChange={setWebdav('maxBackups')} placeholder="0" />
-                    </div>
-                  </ProviderCard>
-                )}
-
-                {/* R2 Config */}
-                {syncProvider === 'r2' && (
-                  <ProviderCard
-                    provider={PROVIDERS.r2}
-                    form={r2Form}
-                    configured={r2Configured}
-                    editing={r2Editing}
-                    onEdit={() => setR2Editing(true)}
-                    onCancelEdit={() => setR2Editing(false)}
-                    testing={r2Testing}
-                    testResult={r2TestResult}
-                    onTest={handleR2Test}
-                    loading={r2Loading}
-                    onSave={handleR2Save}
-                  >
-                    <div className="form-group">
-                      <label className="form-label">{$t('访问密钥 ID (Access Key ID)')}</label>
-                      <input className="input" value={r2Form.accessKeyId} onChange={setR2('accessKeyId')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('秘密访问密钥 (Secret Access Key)')}</label>
-                      <input className="input" type="password" value={r2Form.secretAccessKey} onChange={setR2('secretAccessKey')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('存储桶 (Bucket)')}</label>
-                      <input className="input" value={r2Form.bucket} onChange={setR2('bucket')} placeholder="your-bucket" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('端点地址 (Endpoint)')}</label>
-                      <input className="input" value={r2Form.endpoint} onChange={setR2('endpoint')} placeholder="https://your-account.r2.cloudflarestorage.com" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('区域 (Region)')}</label>
-                      <input className="input" value={r2Form.region} onChange={setR2('region')} placeholder="auto" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('前缀 (Prefix)')}</label>
-                      <input className="input" value={r2Form.prefix} onChange={setR2('prefix')} placeholder="Lumin/" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('保留份数 (0=不限)')}</label>
-                      <input className="input" type="number" min="0" value={r2Form.maxBackups} onChange={setR2('maxBackups')} placeholder="0" />
-                    </div>
-                  </ProviderCard>
-                )}
-
-                {/* FTP Config */}
-                {syncProvider === 'ftp' && (
-                  <ProviderCard
-                    provider={PROVIDERS.ftp}
-                    form={ftpForm}
-                    configured={ftpConfigured}
-                    editing={ftpEditing}
-                    onEdit={() => setFtpEditing(true)}
-                    onCancelEdit={() => setFtpEditing(false)}
-                    testing={ftpTesting}
-                    testResult={ftpTestResult}
-                    onTest={handleTestFTP}
-                    loading={ftpLoading}
-                    onSave={handleSaveFTP}
-                  >
-                    <div className="form-group">
-                      <label className="form-label">{$t('主机地址')}</label>
-                      <input className="input" value={ftpForm.host} onChange={setFTP('host')} placeholder="ftp.example.com" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('端口')}</label>
-                      <input className="input" type="number" value={ftpForm.port} onChange={setFTP('port')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('用户名')}</label>
-                      <input className="input" value={ftpForm.username} onChange={setFTP('username')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('密码')}</label>
-                      <input className="input" type="password" value={ftpForm.password} onChange={setFTP('password')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('远程保存目录')}</label>
-                      <input className="input" value={ftpForm.remoteDir} onChange={setFTP('remoteDir')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('保留份数 (0=不限)')}</label>
-                      <input className="input" type="number" min="0" value={ftpForm.maxBackups} onChange={setFTP('maxBackups')} placeholder="0" />
-                    </div>
-                  </ProviderCard>
-                )}
-
-                {/* SFTP Config */}
-                {syncProvider === 'sftp' && (
-                  <ProviderCard
-                    provider={PROVIDERS.sftp}
-                    form={sftpForm}
-                    configured={sftpConfigured}
-                    editing={sftpEditing}
-                    onEdit={() => setSftpEditing(true)}
-                    onCancelEdit={() => setSftpEditing(false)}
-                    testing={sftpTesting}
-                    testResult={sftpTestResult}
-                    onTest={handleTestSFTP}
-                    loading={sftpLoading}
-                    onSave={handleSaveSFTP}
-                  >
-                    <div className="form-group">
-                      <label className="form-label">{$t('主机地址')}</label>
-                      <input className="input" value={sftpForm.host} onChange={setSFTP('host')} placeholder="sftp.example.com" />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('端口')}</label>
-                      <input className="input" type="number" value={sftpForm.port} onChange={setSFTP('port')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('用户名')}</label>
-                      <input className="input" value={sftpForm.username} onChange={setSFTP('username')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('认证方式')}</label>
-                      <select className="input" value={sftpForm.authMethod} onChange={setSFTP('authMethod')}>
-                        <option value="password">{$t('密码认证')}</option>
-                        <option value="key">{$t('密钥认证')}</option>
-                      </select>
-                    </div>
-                    {sftpForm.authMethod === 'password' ? (
-                      <div className="form-group">
-                        <label className="form-label">{$t('密码')}</label>
-                        <input className="input" type="password" value={sftpForm.password} onChange={setSFTP('password')} />
-                      </div>
-                    ) : (
-                      <>
-                        <div className="form-group">
-                          <label className="form-label">{$t('私钥内容')}</label>
-                          <textarea className="input" style={{ minHeight: 100, fontFamily: 'monospace', fontSize: 12 }} value={sftpForm.privateKey} onChange={setSFTP('privateKey')} placeholder="-----BEGIN OPENSSH PRIVATE KEY-----&#10;...&#10;-----END OPENSSH PRIVATE KEY-----" />
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                          <button className="btn btn-ghost" onClick={async () => {
-                            try {
-                              const key = await AppGo.ReadPrivateKeyFile();
-                              if (key) setSftpForm(prev => ({ ...prev, privateKey: key }));
-                            } catch (e) {
-                              addToast($t('读取私钥文件失败') + ': ' + e, 'error');
-                            }
-                          }} style={{ fontSize: 12 }}>
-                            <FolderOpen size={14} /> {$t('从文件加载私钥')}
-                          </button>
-                        </div>
-                      </>
-                    )}
-                    <div className="form-group">
-                      <label className="form-label">{$t('远程保存目录')}</label>
-                      <input className="input" value={sftpForm.remoteDir} onChange={setSFTP('remoteDir')} />
-                    </div>
-                    <div className="form-group">
-                      <label className="form-label">{$t('保留份数 (0=不限)')}</label>
-                      <input className="input" type="number" min="0" value={sftpForm.maxBackups} onChange={setSFTP('maxBackups')} placeholder="0" />
-                    </div>
-                  </ProviderCard>
-                )}
-
-                {/* 自动同步模式 */}
-                <div style={{ background: 'var(--surface-overlay)', padding: 24, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>{$t('自动同步模式')}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20 }}>{$t('选择自动同步使用的云服务，启动时按偏好执行合并同步')}</div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                    {[
-                      { id: 'webdav', label: <><Cloud size={14} /> WebDAV</>, desc: $t('仅使用 WebDAV 同步（默认），若未配置则尝试其他') },
-                      { id: 'r2', label: <><Database size={14} /> R2 (S3)</>, desc: $t('仅使用 R2 同步，若未配置则尝试其他') },
-                      { id: 'ftp', label: <><Folder size={14} /> FTP</>, desc: $t('仅使用 FTP 同步，若未配置则尝试其他') },
-                      { id: 'sftp', label: <><Lock size={14} /> SFTP</>, desc: $t('仅使用 SFTP 同步，若未配置则尝试其他') },
-                      { id: 'all', label: <><RefreshCw size={14} /> {$t('全部同步')}</>, desc: $t('同时同步所有已配置的云服务，按顺序分别合并') },
-                    ].map(opt => (
-                      <div
-                        key={opt.id}
-                        onClick={async () => {
-                          setSyncMode(opt.id);
-                          try { await AppGo.SetSyncMode(opt.id); } catch (_) {}
-                        }}
-                        style={{
-                          display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 16px',
-                          background: syncMode === opt.id ? 'rgba(34,197,94,0.06)' : 'var(--surface-raised)',
-                          border: `1px solid ${syncMode === opt.id ? 'rgba(34,197,94,0.4)' : 'var(--border)'}`,
-                          borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s',
-                        }}
-                      >
-                        <div style={{
-                          width: 18, height: 18, borderRadius: '50%', flexShrink: 0, marginTop: 1,
-                          border: `2px solid ${syncMode === opt.id ? 'var(--success)' : 'var(--border)'}`,
-                          background: syncMode === opt.id ? 'var(--success)' : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center'
-                        }}>
-                          {syncMode === opt.id && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
-                        </div>
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-primary)' }}>{opt.label}</span>
-                          </div>
-                          <div style={{ fontSize: 12, color: 'var(--text-tertiary)', marginTop: 3 }}>{opt.desc}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 云端同步 (shared for both providers) */}
-                <div style={{ background: 'var(--surface-overlay)', padding: 24, borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
-                  <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 8 }}>{$t('云端同步')}</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 20 }}>{$t('同步所有配置，全程 AES-256 高强加密')}</div>
-                  
-                  {(isConfigured || r2Configured || ftpConfigured || sftpConfigured) && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, marginBottom: 20, color: 'var(--success)', fontSize: 13 }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center' }}><Sparkles size={14} /></span> <span><strong>{$t('已开启自动云端备份：')}</strong>{$t('当您添加、编辑、删除服务器或修改配置时，后台将静默保存至云端。')}</span>
-                    </div>
-                  )}
-
-                  {lastBackup && <div style={{ fontSize: 12, color: 'var(--success)', marginBottom: 12 }}>{$t('上次同步')}: {lastBackup}</div>}
-                  
-                  <div style={{ display: 'flex', gap: 12 }}>
-                    <button className="btn btn-secondary" onClick={handleSync} disabled={syncing}>
-                      {syncing ? $t('同步中...') : <><RefreshCw size={14} /> {$t('合并同步')}</>}
-                    </button>
-                    <button className="btn btn-secondary" onClick={handleRestore} disabled={loadingBackups || restoring}>
-                      {loadingBackups ? $t('加载备份列表中...') : <><RefreshCw size={14} /> {$t('从云端恢复')}</>}
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <SyncTab
+                syncProvider={syncProvider}
+                onSyncProviderChange={setSyncProvider}
+                syncMode={syncMode}
+                onSyncModeChange={async (id) => { setSyncMode(id); try { await AppGo.SetSyncMode(id); } catch (_) {} }}
+                providers={PROVIDERS}
+                providerList={PROVIDER_LIST}
+                webdavForm={webdavForm}
+                setWebdavField={setWebdav}
+                webdavConfigured={isConfigured}
+                webdavEditing={isEditing}
+                setWebdavEditing={setIsEditing}
+                webdavLoading={loading}
+                webdavTesting={testing}
+                webdavTestResult={testResult}
+                onWebdavTest={handleTest}
+                onWebdavSave={handleSave}
+                r2Form={r2Form}
+                setR2Field={setR2}
+                r2Configured={r2Configured}
+                r2Editing={r2Editing}
+                setR2Editing={setR2Editing}
+                r2Loading={r2Loading}
+                r2Testing={r2Testing}
+                r2TestResult={r2TestResult}
+                onR2Test={handleR2Test}
+                onR2Save={handleR2Save}
+                ftpForm={ftpForm}
+                setFTPField={setFTP}
+                ftpConfigured={ftpConfigured}
+                ftpEditing={ftpEditing}
+                setFtpEditing={setFtpEditing}
+                ftpLoading={ftpLoading}
+                ftpTesting={ftpTesting}
+                ftpTestResult={ftpTestResult}
+                onTestFTP={handleTestFTP}
+                onSaveFTP={handleSaveFTP}
+                sftpForm={sftpForm}
+                setSFTPField={setSFTP}
+                sftpConfigured={sftpConfigured}
+                sftpEditing={sftpEditing}
+                setSftpEditing={setSftpEditing}
+                sftpLoading={sftpLoading}
+                sftpTesting={sftpTesting}
+                sftpTestResult={sftpTestResult}
+                onTestSFTP={handleTestSFTP}
+                onSaveSFTP={handleSaveSFTP}
+                setSftpForm={setSftpForm}
+                lastBackup={lastBackup}
+                syncing={syncing}
+                onSync={handleSync}
+                loadingBackups={loadingBackups}
+                restoring={restoring}
+                onRestore={handleRestore}
+                isAnyConfigured={isConfigured || r2Configured || ftpConfigured || sftpConfigured}
+                addToast={addToast}
+              />
             )}
+
 
           </div>
         </div>

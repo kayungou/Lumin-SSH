@@ -4,6 +4,7 @@ import App from './App.jsx';
 import { t } from './i18n.js';
 import { AlertTriangle } from 'lucide-react';
 import './index.css';
+import { hexToRgb } from './utils/theme.js';
 
 // 全局错误边界，防止渲染错误导致白屏
 class ErrorBoundary extends React.Component {
@@ -57,16 +58,10 @@ if (applyLight) {
 }
 
 // Ensure the accent color is overridden
-const hexToRgb = (hex) => {
-  const c = hex.replace('#', '');
-  return `${parseInt(c.slice(0,2), 16)}, ${parseInt(c.slice(2,4), 16)}, ${parseInt(c.slice(4,6), 16)}`;
-};
 const useCustomAccent = localStorage.getItem('useCustomAccent') === 'true';
 if (useCustomAccent) {
-  document.documentElement.style.setProperty('--accent', savedAccent);
-  document.documentElement.style.setProperty('--accent-rgb', hexToRgb(savedAccent));
-  document.documentElement.style.setProperty('--success', savedAccent);
-  document.documentElement.style.setProperty('--green', savedAccent);
+  document.body.style.setProperty('--accent', savedAccent);
+  document.body.style.setProperty('--accent-rgb', hexToRgb(savedAccent));
 }
 
 // 禁用浏览器默认右键菜单（完全拦截，以便使用统一的自定义玻璃菜单）

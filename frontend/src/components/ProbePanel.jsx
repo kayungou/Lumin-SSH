@@ -49,7 +49,7 @@ const MemDonut = React.memo(function MemDonut({ used, cache, free, total }) {
     <svg width={70} height={70} style={{ flexShrink: 0 }}>
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--border)" strokeWidth={8} />
       {seg(f1, 'var(--danger)', 0)}
-      {seg(f2, 'var(--text-tertiary)', f1)}
+      {seg(f2, 'var(--warning)', f1)}
       {seg(f3, 'var(--success)', f1 + f2)}
     </svg>
   );
@@ -289,7 +289,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
         </div>
         {showConfirm && (
           <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(6px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 14, zIndex: Z.COMPONENT_OVERLAY }}>
-            <div style={{ background: 'var(--surface-raised)', border: '1px solid rgba(var(--accent-rgb),0.22)', borderRadius: 14, padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: '0 24px 64px rgba(0,0,0,0.65)', maxWidth: 260 }}>
+            <div style={{ background: 'var(--surface-raised)', border: '1px solid rgba(var(--accent-rgb),0.22)', borderRadius: 14, padding: '20px 18px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: 'var(--shadow-xl)', maxWidth: 260 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                 <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-tertiary)' }}><Search size={16} /></span>
                 <div>
@@ -362,7 +362,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
         </div>
         <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
           <span style={{ fontSize: 11.5, padding: '2px 8px', borderRadius: 4, background: 'rgba(var(--accent-rgb),0.12)', border: '1px solid rgba(var(--accent-rgb),0.3)', color: 'var(--success)', fontWeight: 700 }}>{osParts[0]}</span>
-          <span style={{ fontSize: 11.5, padding: '2px 8px', borderRadius: 4, background: 'var(--surface-sunken)', color: 'var(--text-tertiary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{info.os?.replace(osParts[0], '').trim()}</span>
+          <span style={{ fontSize: 11.5, padding: '2px 8px', borderRadius: 4, background: 'var(--surface-sunken)', border: '1px solid var(--border)', color: 'var(--text-tertiary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{info.os?.replace(osParts[0], '').trim()}</span>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 8px' }}>
           <div style={{ fontSize: 12, color: 'var(--text-tertiary)' }}>{t('时区')} <span style={{ color: 'var(--success)', fontFamily: 'var(--font-mono)', fontSize: 12 }}>{info.timezone}</span></div>
@@ -405,7 +405,7 @@ export default function ProbePanel({ sessionId, host, addToast, enabled, onEnabl
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
             {[
               { dot: 'var(--danger)', label: t('已用'), val: fmem(info.memUsed) },
-              { dot: 'var(--text-tertiary)', label: t('缓存'), val: fmem(info.memCache) },
+              { dot: 'var(--warning)', label: t('缓存'), val: fmem(info.memCache) },
               { dot: 'var(--success)', label: t('空闲'), val: fmem(info.memFree) },
             ].map(({ dot, label, val }) => (
               <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'var(--surface-overlay)', borderRadius: 6, padding: '4px 8px' }}>
