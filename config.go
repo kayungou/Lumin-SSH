@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"crypto/aes"
 	"crypto/cipher"
 	"crypto/rand"
@@ -55,8 +56,9 @@ type ConfigManager struct {
 	historyDir     string
 	globalHistFile string
 	mu             sync.RWMutex
-	connCache      []Connection // 缓存连接列表
-	connCacheDirty bool         // 缓存是否需要刷新
+	connCache      []Connection    // 缓存连接列表
+	connCacheDirty bool            // 缓存是否需要刷新
+	wailsCtx       context.Context // 用于向 Wails 前端发送事件
 }
 
 func NewConfigManager() *ConfigManager {

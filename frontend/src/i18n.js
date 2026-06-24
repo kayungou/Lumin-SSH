@@ -522,6 +522,16 @@ const dict = {
     "记住窗口大小": "记住窗口大小",
     "下次启动时恢复上次调整的窗口尺寸": "下次启动时恢复上次调整的窗口尺寸",
     "恢复默认大小": "恢复默认大小",
+
+    // Sync failure dialog
+    "云端同步失败": "云端同步失败",
+    "数据未能上传到云端，本地数据不受影响。": "数据未能上传到云端，本地数据不受影响。",
+    "忽略": "忽略",
+    "同步成功": "同步成功",
+    "云端同步未完成，确定退出吗？": "云端同步未完成，确定退出吗？",
+    "同步未完成": "同步未完成",
+    "仍然退出": "仍然退出",
+    "重试同步": "重试同步",
   },
   "en-US": {
     "闪电直连": "Quick Connect",
@@ -1046,6 +1056,16 @@ const dict = {
     "记住窗口大小": "Remember Window Size",
     "下次启动时恢复上次调整的窗口尺寸": "Restore last window size on startup",
     "恢复默认大小": "Reset to Default",
+
+    // Sync failure dialog
+    "云端同步失败": "Cloud Sync Failed",
+    "数据未能上传到云端，本地数据不受影响。": "Data was not uploaded to cloud. Local data is not affected.",
+    "忽略": "Dismiss",
+    "同步成功": "Sync Successful",
+    "云端同步未完成，确定退出吗？": "Cloud sync incomplete. Are you sure you want to quit?",
+    "同步未完成": "Sync Incomplete",
+    "仍然退出": "Quit Anyway",
+    "重试同步": "Retry Sync",
   }
 };
 

@@ -57,6 +57,7 @@ func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
 	a.sshManager.ctx = ctx // Give SSH manager access to Wails events
 	a.sshManager.app = a   // Give SSH manager access to WebSocket registry
+	a.configManager.wailsCtx = ctx
 
 	// ── 启动本地 WebSocket 终端服务器 ─────────────────────────────────
 	// 不经过 Wails IPC，直接走 TCP loopback，延迟极低
@@ -585,6 +586,11 @@ func (a *App) RestoreFromSFTPFile(filename string) (map[string]interface{}, erro
 
 func (a *App) SyncFromSFTP() (map[string]interface{}, error) {
 	return a.configManager.SyncFromSFTP()
+}
+
+// RetrySync 手动重试云端同步，返回空字符串表示成功，非空为错误信息
+func (a *App) RetrySync() string {
+	return a.configManager.RetrySync()
 }
 
 // GetQuickCommands 获取快捷命令列表

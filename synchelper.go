@@ -10,6 +10,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 // ─── 通用接口 ─────────────────────────────────────────────
@@ -331,7 +333,7 @@ func (c *ConfigManager) syncFromProvider(s RemoteStorage) (map[string]interface{
 }
 
 // autoSyncProvider 自动同步：以本地为准推送变更到云端，无变化则跳过
-func (c *ConfigManager) autoSyncProvider(s RemoteStorage, maxBackups int) {
+func (c *ConfigManager) autoSyncProvider(s RemoteStorage, maxBackups int) error {
 	localSnap := &SyncSnapshot{
 		Connections:   c.GetConnections(),
 		QuickCommands: c.loadRawFile(c.quickCmdFile),
@@ -339,17 +341,19 @@ func (c *ConfigManager) autoSyncProvider(s RemoteStorage, maxBackups int) {
 
 	remoteSnap, err := c.fetchLatestBackup(s)
 	if err != nil {
-		if _, berr := c.backupConnections(s, maxBackups); berr != nil { // 云端无备份，直接上传
-			log.Printf("autoSync backup failed: %v", berr)
+		// 尝试上传一次；如果上传也失败，说明是网络问题，返回错误触发重试
+		if _, berr := c.backupConnections(s, maxBackups); berr != nil {
+			return fmt.Errorf("云端访问失败: %w", berr)
 		}
-		return
+		return nil // 云端确实无备份，首次上传成功
 	}
 
 	if !snapshotEqual(localSnap, remoteSnap) {
 		if _, berr := c.backupConnections(s, maxBackups); berr != nil {
-			log.Printf("autoSync backup failed: %v", berr)
+			return fmt.Errorf("增量同步失败: %w", berr)
 		}
 	}
+	return nil
 }
 
 // ─── 同步模式分发 ─────────────────────────────────────────
@@ -393,23 +397,64 @@ type providerEntry struct {
 }
 
 // AutoSync 自动同步：以本地为准推送变更到所有已配置的云端。
-// 各 provider 只读本地文件（GetConnections/loadRawFile 有 c.mu 保护）、写各自远端，无冲突，
-// 因此并行调度以降低总耗时。任一 provider 失败仅记录日志（autoSyncProvider 内部已记录），不影响其他。
+// 失败时最多重试 3 次（间隔 2s/4s/8s），仍失败则通过 Wails 事件通知前端。
 func (c *ConfigManager) AutoSync() {
 	providers := c.getSyncProviders()
+	const maxRetries = 3
+
 	var wg sync.WaitGroup
 	for _, p := range providers {
 		wg.Add(1)
 		go func(p providerEntry) {
 			defer wg.Done()
-			// 释放该 provider 持有的底层连接（如 SFTP/FTP），webdav/r2 无需关闭
 			if cl, ok := p.storage.(storageCloser); ok {
 				defer cl.Close()
 			}
-			c.autoSyncProvider(p.storage, p.maxBackups)
+
+			var lastErr error
+			for attempt := 0; attempt < maxRetries; attempt++ {
+				if attempt > 0 {
+					time.Sleep(time.Duration(1<<uint(attempt)) * time.Second) // 2s, 4s, 8s
+				}
+				lastErr = c.autoSyncProvider(p.storage, p.maxBackups)
+				if lastErr == nil {
+					return
+				}
+				log.Printf("autoSync attempt %d/%d failed: %v", attempt+1, maxRetries, lastErr)
+			}
+
+			// 全部重试失败，通知前端
+			if lastErr != nil {
+				providerName := fmt.Sprintf("%T", p.storage)
+				log.Printf("autoSync all %d attempts failed for %s: %v", maxRetries, providerName, lastErr)
+				if c.wailsCtx != nil {
+					runtime.EventsEmit(c.wailsCtx, "sync-failed", map[string]interface{}{
+						"provider": providerName,
+						"error":    lastErr.Error(),
+					})
+				}
+			}
 		}(p)
 	}
 	wg.Wait()
+}
+
+// RetrySync 前端手动重试同步，返回错误信息供前端展示
+func (c *ConfigManager) RetrySync() string {
+	providers := c.getSyncProviders()
+	var errs []string
+	for _, p := range providers {
+		if cl, ok := p.storage.(storageCloser); ok {
+			defer cl.Close()
+		}
+		if err := c.autoSyncProvider(p.storage, p.maxBackups); err != nil {
+			errs = append(errs, fmt.Sprintf("%T: %v", p.storage, err))
+		}
+	}
+	if len(errs) > 0 {
+		return strings.Join(errs, "; ")
+	}
+	return ""
 }
 
 // cmdKey 生成去重键：名称+命令（命令相同的项视为重复）

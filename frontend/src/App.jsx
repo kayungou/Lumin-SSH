@@ -72,6 +72,7 @@ export default function App() {
   // ── 新增自动检测更新状态 ──────────────────────────────
   const [startupUpdateInfo, setStartupUpdateInfo] = useState(null);
   const [isUpdateModalVisible, setIsUpdateModalVisible] = useState(false);
+  const [syncFailed, setSyncFailed] = useState(null); // { provider, error }
   
   // ── 新增分屏拖拽大小控制状态与逻辑 ──────────────────────
   const [leftSplitWidth, setLeftSplitWidth] = useState(() => {
@@ -707,6 +708,27 @@ export default function App() {
 
   // ── 关闭窗口通用处理 ──────────────────────────────────────────
   const handleCloseWindow = useCallback(async () => {
+    if (syncFailed) {
+      const choice = await window.luminDialog?.choice?.(
+        t('云端同步未完成，确定退出吗？'),
+        t('同步未完成'),
+        [
+          { label: t('仍然退出'), value: 'quit', primary: true },
+          { label: t('重试同步'), value: 'retry', secondary: true },
+          { label: t('取消'), value: 'cancel', secondary: true },
+        ]
+      );
+      if (choice === 'quit') {
+        AppGo.DoQuit();
+      } else if (choice === 'retry') {
+        const err = await AppGo.RetrySync();
+        if (!err) {
+          setSyncFailed(null);
+          addToast(t('同步成功'), 'success', 3000);
+        }
+      }
+      return;
+    }
     const choice = await window.luminDialog?.choice?.(
       t('请选择操作'),
       t('关闭窗口'),
@@ -721,13 +743,21 @@ export default function App() {
     } else if (choice === 'tray') {
       WindowHide();
     }
-  }, [t]);
+  }, [t, syncFailed, addToast]);
 
   // ── 监听关闭窗口请求，弹出选择对话框 ──────────────────────────
   useEffect(() => {
     const unbind = EventsOn('close-request', handleCloseWindow);
     return () => { if (unbind) unbind(); };
   }, [handleCloseWindow]);
+
+  // ── 监听云端同步失败事件 ──────────────────────────────────
+  useEffect(() => {
+    const unbind = EventsOn('sync-failed', (data) => {
+      setSyncFailed(data);
+    });
+    return () => { if (unbind) unbind(); };
+  }, []);
 
   // ── 监听终端触发的重连请求 ──────────────────────────────────
   useEffect(() => {
@@ -1418,6 +1448,60 @@ export default function App() {
         onClose={() => setIsUpdateModalVisible(false)}
         onUpdate={handleApplyStartupUpdate}
       />
+
+      {/* ── 云端同步失败弹窗 ──────────────────────────── */}
+      {syncFailed && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 1100,
+          width: 380, background: 'var(--glass-bg)', backdropFilter: 'var(--glass-blur)',
+          border: '1px solid var(--glass-border)',
+          boxShadow: '0 16px 40px rgba(0,0,0,0.4)',
+          borderRadius: 16, padding: '16px 20px',
+          animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+            <div style={{ fontSize: 28, lineHeight: 1 }}>⚠</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', marginBottom: 4 }}>
+                {t('云端同步失败')}
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: 6 }}>
+                {t('数据未能上传到云端，本地数据不受影响。')}
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--danger)', background: 'rgba(var(--danger-rgb), 0.08)', padding: '6px 10px', borderRadius: 8, marginBottom: 14, wordBreak: 'break-all', lineHeight: 1.5 }}>
+                {syncFailed.error}
+              </div>
+              <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                <button
+                  style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 500, background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-secondary)', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={() => setSyncFailed(null)}
+                  onMouseEnter={e => { e.currentTarget.style.color = 'var(--text-primary)'; e.currentTarget.style.background = 'var(--surface-hover)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.color = 'var(--text-secondary)'; e.currentTarget.style.background = 'transparent'; }}
+                >
+                  {t('忽略')}
+                </button>
+                <button
+                  style={{ padding: '6px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, background: 'var(--primary)', border: 'none', color: '#fff', cursor: 'pointer', transition: 'all 0.2s' }}
+                  onClick={async () => {
+                    setSyncFailed(null);
+                    const err = await AppGo.RetrySync();
+                    if (err) {
+                      setSyncFailed({ provider: '', error: err });
+                    } else {
+                      addToast(t('同步成功'), 'success', 3000);
+                    }
+                  }}
+                  onMouseEnter={e => e.currentTarget.style.opacity = '0.85'}
+                  onMouseLeave={e => e.currentTarget.style.opacity = '1'}
+                >
+                  {t('重试')}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <GlobalContextMenu />
 
       {/* ── 标签右键菜单 ── */}
