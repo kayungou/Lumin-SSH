@@ -6,7 +6,7 @@ import { useTranslation } from '../i18n.js';
 const defaultForm = {
   name: '',
   host: '',
-  port: '22',
+  port: '',
   username: 'root',
   authType: 'password',
   password: '',
@@ -124,7 +124,7 @@ export default function AddServerModal({ server, onSave, onClose }) {
                     />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Port</label>
+                    <label className="form-label">{t('端口')}</label>
                     <input
                       className="input"
                       placeholder="22"

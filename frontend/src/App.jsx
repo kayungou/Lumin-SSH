@@ -221,7 +221,7 @@ export default function App() {
   }, []);
 
   // 闪电直连的表单状态
-  const quickFormInit = { name: '', host: '', port: '22', user: 'root', auth: 'password', pass: '', key: '', passphrase: '', showPass: false, showPassphrase: false };
+  const quickFormInit = { name: '', host: '', port: '', user: 'root', auth: 'password', pass: '', key: '', passphrase: '', showPass: false, showPassphrase: false };
   const [quickForm, dispatchQuick] = useReducer((s, a) => {
     if (a.type === 'reset') return quickFormInit;
     return { ...s, [a.type]: a.value };
