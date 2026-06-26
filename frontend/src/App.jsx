@@ -389,22 +389,21 @@ export default function App() {
       const staticInfo = await AppGo.GetServerStaticInfo(sessionId);
       if (staticInfo) {
         setSessions((prev) => prev.map((s) => s.id === sessionId ? { ...s, osInfo: staticInfo } : s));
-        if (serverId) {
-          const detectedOs = staticInfo.os || '';
-          if (detectedOs) {
-            setServers(prevServers => {
-              const currentServer = prevServers.find(s => s.id === serverId);
-              if (currentServer) {
-                // 总是调用：OS 变了会更新 OS，OS 没变也会触发同步（确保 noSync 保存的密码等数据被同步）
-                AppGo.SetConnectionOS(serverId, detectedOs).catch(console.error);
-                if (currentServer.os !== detectedOs) {
-                  setServers(prev => prev.map(s => s.id === serverId ? { ...s, os: detectedOs } : s));
-                }
-              }
-              return prevServers;
-            });
+      }
+      if (serverId) {
+        setServers(prevServers => {
+          const currentServer = prevServers.find(s => s.id === serverId);
+          if (currentServer) {
+            const detectedOs = staticInfo?.os || '';
+            // 总是调用：OS 变了会更新 OS，OS 没变也会触发同步（确保 noSync 保存的密码等数据被同步）
+            // OS 检测失败时用已有 OS，避免清空
+            AppGo.SetConnectionOS(serverId, detectedOs || currentServer.os || '').catch(console.error);
+            if (detectedOs && currentServer.os !== detectedOs) {
+              setServers(prev => prev.map(s => s.id === serverId ? { ...s, os: detectedOs } : s));
+            }
           }
-        }
+          return prevServers;
+        });
       }
       // 启用监控
       setMonitoringEnabled((prev) => ({ ...prev, [sessionId]: true }));
