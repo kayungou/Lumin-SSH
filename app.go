@@ -663,15 +663,31 @@ func (a *App) UpdateApp(downloadUrl string, filename string) error {
 	}
 	// 2. 发起请求下载新文件（带超时，防止慢网络永久阻塞）
 	client := &http.Client{Timeout: 10 * time.Minute}
-	resp, err := client.Get(downloadUrl)
-	if err != nil {
-		return fmt.Errorf("failed to download update: %w", err)
+	// ponytail: 尝试直连，失败后走 ghfast 代理加速
+	const ghProxy = "https://ghfast.top/"
+	tryUrls := []string{downloadUrl}
+	if strings.Contains(downloadUrl, "github.com") {
+		tryUrls = append(tryUrls, ghProxy+downloadUrl)
+	}
+
+	var resp *http.Response
+	var err error
+	for _, u := range tryUrls {
+		resp, err = client.Get(u)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			downloadUrl = u // 记录实际成功的 URL，后续 .sha256 也走同源
+			break
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+		fmt.Printf("[UpdateApp] download from %s failed: err=%v, trying next\n", u, err)
+		resp = nil
+	}
+	if resp == nil {
+		return fmt.Errorf("failed to download update from all sources: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("bad status: %s", resp.Status)
-	}
 
 	isSetup := strings.Contains(strings.ToLower(filename), "installer") || strings.Contains(strings.ToLower(filename), "setup")
 	var targetPath string
