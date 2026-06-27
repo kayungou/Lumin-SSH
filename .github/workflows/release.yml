@@ -43,8 +43,12 @@ jobs:
       - name: Build Wails
         run: |
           export PATH=$HOME/go/bin:$PATH
+          VERSION=${GITHUB_REF_NAME#v}
           wails build -clean -tags webkit2_41 -o Lumin
-          echo "binary=${{ github.workspace }}/build/bin/Lumin" >> $GITHUB_ENV
+          cp build/bin/Lumin "build/Lumin-v${VERSION}-linux-amd64"
+          sha256sum "build/Lumin-v${VERSION}-linux-amd64" > "build/Lumin-v${VERSION}-linux-amd64.sha256"
+          echo "binary=${{ github.workspace }}/build/Lumin-v${VERSION}-linux-amd64" >> $GITHUB_ENV
+          echo "binary_sha=${{ github.workspace }}/build/Lumin-v${VERSION}-linux-amd64.sha256" >> $GITHUB_ENV
 
       - name: Package .deb & .rpm
         run: |
@@ -74,6 +78,7 @@ jobs:
         with:
           files: |
             ${{ env.binary }}
+            ${{ env.binary_sha }}
             ${{ env.deb }}
             ${{ env.deb_sha }}
             ${{ env.rpm }}
