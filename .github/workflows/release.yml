@@ -68,8 +68,8 @@ jobs:
           if [ -n "$RPM_FILE" ]; then
             mv "$RPM_FILE" build/
             RPM_BASENAME=$(basename "$RPM_FILE")
-            # 统一 release 为 1
-            RPM_BASENAME_CLEAN=$(echo "$RPM_BASENAME" | sed 's/-[0-9]\+\.x86_64/-1.x86_64/')
+            # 去掉 alien 自动递增的 release 编号
+            RPM_BASENAME_CLEAN=$(echo "$RPM_BASENAME" | sed 's/-[0-9]\+\.x86_64/.x86_64/')
             if [ "$RPM_BASENAME" != "$RPM_BASENAME_CLEAN" ] && [ -f "build/$RPM_BASENAME" ]; then
               mv "build/$RPM_BASENAME" "build/$RPM_BASENAME_CLEAN"
               RPM_BASENAME="$RPM_BASENAME_CLEAN"
