@@ -20,7 +20,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             libgtk-3-dev libwebkit2gtk-4.1-dev libglib2.0-dev \
-            libc6-dev libayatana-appindicator3-dev
+            libc6-dev libayatana-appindicator3-dev \
+            rpm alien
 
       - uses: actions/setup-go@v5
         with:
@@ -45,7 +46,7 @@ jobs:
           wails build -clean -tags webkit2_41 -o Lumin
           echo "binary=${{ github.workspace }}/build/bin/Lumin" >> $GITHUB_ENV
 
-      - name: Package .deb
+      - name: Package .deb & .rpm
         run: |
           VERSION=${GITHUB_REF_NAME#v}
           mkdir -p build/deb/usr/bin
@@ -55,6 +56,16 @@ jobs:
           sha256sum build/lumin_${VERSION}_amd64.deb > build/lumin_${VERSION}_amd64.deb.sha256
           echo "deb=${{ github.workspace }}/build/lumin_${VERSION}_amd64.deb" >> $GITHUB_ENV
           echo "deb_sha=${{ github.workspace }}/build/lumin_${VERSION}_amd64.deb.sha256" >> $GITHUB_ENV
+          # Convert .deb to .rpm via alien
+          sudo alien -r build/lumin_${VERSION}_amd64.deb -g -v 2>/dev/null || true
+          RPM_FILE=$(find . -name "*.rpm" 2>/dev/null | head -1)
+          if [ -n "$RPM_FILE" ]; then
+            mv "$RPM_FILE" build/
+            RPM_BASENAME=$(basename "$RPM_FILE")
+            sha256sum "build/$RPM_BASENAME" > "build/$RPM_BASENAME.sha256"
+            echo "rpm=${{ github.workspace }}/build/$RPM_BASENAME" >> $GITHUB_ENV
+            echo "rpm_sha=${{ github.workspace }}/build/$RPM_BASENAME.sha256" >> $GITHUB_ENV
+          fi
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
@@ -63,6 +74,8 @@ jobs:
             ${{ env.binary }}
             ${{ env.deb }}
             ${{ env.deb_sha }}
+            ${{ env.rpm }}
+            ${{ env.rpm_sha }}
 
   build-macos:
     runs-on: macos-latest
@@ -130,23 +143,38 @@ jobs:
       - name: Install Wails
         run: go install github.com/wailsapp/wails/v2/cmd/wails@latest
 
+      - name: Install NSIS
+        run: choco install nsis -y
+
       - name: Install frontend dependencies
         run: npm install
         working-directory: frontend
 
-      - name: Build Wails
+      - name: Build Wails (binary + NSIS installer)
         run: |
-          $env:PATH = "$env:USERPROFILE\go\bin;" + $env:PATH
-          wails build -clean -o Lumin.exe
+          $env:PATH = "$env:USERPROFILE\go\bin;C:\Program Files (x86)\NSIS;" + $env:PATH
+          wails build -clean -o Lumin.exe --nsis
 
-      - name: Package
+      - name: Package portable
         shell: pwsh
         run: |
           $VERSION = "$env:GITHUB_REF_NAME" -replace "^v", ""
           Compress-Archive -Path build/bin/Lumin.exe -DestinationPath "build/Lumin-$VERSION-portable.zip"
-          CertUtil -hashfile "build/Lumin-$VERSION-portable.zip" SHA256 | Out-File -FilePath "build/Lumin-$VERSION-portable.zip.sha256" -Encoding ascii
+          $hash = (CertUtil -hashfile "build/Lumin-$VERSION-portable.zip" SHA256)[1] -replace " ",""
+          Set-Content -Path "build/Lumin-$VERSION-portable.zip.sha256" -Value "$hash  Lumin-$VERSION-portable.zip"
           echo "portable=${{ github.workspace }}\build\Lumin-$VERSION-portable.zip" >> $env:GITHUB_ENV
           echo "portable_sha=${{ github.workspace }}\build\Lumin-$VERSION-portable.zip.sha256" >> $env:GITHUB_ENV
+
+      - name: Copy NSIS installer
+        shell: pwsh
+        run: |
+          $VERSION = "$env:GITHUB_REF_NAME" -replace "^v", ""
+          $installer = Get-Item "build/bin/*-installer.exe"
+          Copy-Item $installer.FullName "build/Lumin-$VERSION-amd64-installer.exe"
+          $hash = (CertUtil -hashfile "build/Lumin-$VERSION-amd64-installer.exe" SHA256)[1] -replace " ",""
+          Set-Content -Path "build/Lumin-$VERSION-amd64-installer.exe.sha256" -Value "$hash  Lumin-$VERSION-amd64-installer.exe"
+          echo "installer=${{ github.workspace }}\build\Lumin-$VERSION-amd64-installer.exe" >> $env:GITHUB_ENV
+          echo "installer_sha=${{ github.workspace }}\build\Lumin-$VERSION-amd64-installer.exe.sha256" >> $env:GITHUB_ENV
 
       - name: Upload to Release
         uses: softprops/action-gh-release@v2
@@ -154,3 +182,5 @@ jobs:
           files: |
             ${{ env.portable }}
             ${{ env.portable_sha }}
+            ${{ env.installer }}
+            ${{ env.installer_sha }}
