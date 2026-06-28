@@ -1198,11 +1198,11 @@ export default function App() {
                 </div>
                 
                 {activeSession.status === 'connected' && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingBottom: 4 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'center' }}>
                     <span style={{ fontSize: 12, color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>{t('文件管理器布局')}:</span>
                     <select
                       className="select-compact"
-                      style={{ padding: '2px 8px', fontSize: 12, height: 24 }}
+                      style={{ padding: '2px 8px', fontSize: 12 }}
                       value={fileManagerPosition}
                       onChange={(e) => {
                         const val = e.target.value;
