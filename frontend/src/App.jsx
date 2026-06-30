@@ -1409,6 +1409,7 @@ export default function App() {
                           <ProcessPage
                             sessionId={s.id}
                             addToast={addToast}
+                            active={contentTab === 'process'}
                           />
                         </div>
                       )}

@@ -19,7 +19,7 @@ const sortFns = {
   name: (a, b) => (a.name || '').localeCompare(b.name || ''),
 };
 
-export default function ProcessPage({ sessionId, addToast }) {
+export default function ProcessPage({ sessionId, addToast, active }) {
   const { t } = useTranslation();
   const [processes, setProcesses] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,11 +102,12 @@ export default function ProcessPage({ sessionId, addToast }) {
   }, [sessionId]);
 
   useEffect(() => {
+    if (!active) return;
     load();
     const interval = parseInt(localStorage.getItem('probeInterval') || '3', 10);
     timerRef.current = setInterval(load, Math.max(interval, 1) * 1000);
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
-  }, [load]);
+  }, [load, active]);
 
   // 选中进程时加载环境变量
   useEffect(() => {
