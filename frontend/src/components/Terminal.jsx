@@ -307,10 +307,11 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         // 检测密码提示，标记下一行输入为密码（不记入命令历史）
         if (!awaitingPasswordRef.current) {
           const probeText = typeof ev.data === 'string' ? ev.data : textDecoder.decode(ev.data);
-          // ponytail: 只在最后一行像密码提示时触发（含 password/密码 且行尾冒号），
-          // 避免 "admin password: xxx" 之类信息性输出误判，导致下一条普通命令被跳过
+          // ponytail: 只在最后一行像密码/验证码提示时触发（关键词 + 行尾冒号），
+          // 避免 "admin password: xxx" 之类信息性输出误判，导致下一条普通命令被跳过。
+          // 行尾冒号是强约束，关键词可适度放宽：覆盖 OTP/MFA/Token 等验证码提示
           const lastLine = probeText.split(/\r?\n/).pop().trim();
-          if (/(password|passwd|passphrase|密码)/i.test(lastLine) && /[:：]\s*$/.test(lastLine)) {
+          if (/(password|passwd|passphrase|密码|verification|otp|token|2fa|mfa|auth.*code)/i.test(lastLine) && /[:：]\s*$/.test(lastLine)) {
             awaitingPasswordRef.current = true;
           }
         }
@@ -430,6 +431,7 @@ export default function Terminal({ sessionId, serverId, historyServerId, status,
         pendingCmdRef.current += data;
       } else if (data === '\x03' || data === '\x04') {
         pendingCmdRef.current = '';
+        awaitingPasswordRef.current = false; // Ctrl+C/D 取消当前输入，重置密码等待状态，避免下一条普通命令被误跳过
       }
 
       // Local Echo 逻辑 (恢复默认开启)

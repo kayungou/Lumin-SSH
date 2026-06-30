@@ -105,11 +105,17 @@ func (a *App) startup(ctx context.Context) {
 		// 注册当前 WebSocket 连接
 		entry := &wsEntry{conn: conn}
 		a.wsMu.Lock()
+		if old := a.wsConns[sessionId]; old != nil {
+			go old.conn.Close() // 同 session 重连时关闭被覆盖的旧连接，避免 fd 泄漏
+		}
 		a.wsConns[sessionId] = entry
 		a.wsMu.Unlock()
 		defer func() {
 			a.wsMu.Lock()
-			delete(a.wsConns, sessionId)
+			// 仅删除自己的 entry：若已被新连接覆盖，cur != entry，不能误删新连接
+			if cur, ok := a.wsConns[sessionId]; ok && cur == entry {
+				delete(a.wsConns, sessionId)
+			}
 			a.wsMu.Unlock()
 		}()
 

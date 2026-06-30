@@ -867,23 +867,18 @@ func (m *SSHManager) AcceptHostKeyChange(sessionId string, action int) error {
 			}
 			newLines = append(newLines, newLine)
 
-			// 原子写入：先写临时文件，再 rename 覆盖，避免中断损坏原文件
+			// 原子写入：写临时文件后直接 rename 覆盖。
+			// ponytail: os.Rename 在 Unix 上是原子替换，在 Windows 上用 MoveFileEx+MOVEFILE_REPLACE_EXISTING 同样替换。
+			// 旧实现先 rename 原文件到 .bak 再 rename tmp→原路径，当第二步失败且回滚也失败时原文件丢失。
+			// 直接 rename 失败时原文件未被移动，始终完整，无数据丢失风险。
 			tmpPath := knownHostsPath + ".tmp"
 			if err := os.WriteFile(tmpPath, []byte(strings.Join(newLines, "\n")+"\n"), 0600); err != nil {
 				return fmt.Errorf("无法写入 known_hosts: %w", err)
 			}
-			if err := os.Rename(knownHostsPath, knownHostsPath+".bak"); err != nil && !os.IsNotExist(err) {
-				os.Remove(tmpPath)
-				return fmt.Errorf("无法备份 known_hosts: %w", err)
-			}
 			if err := os.Rename(tmpPath, knownHostsPath); err != nil {
-				// 回滚：若回滚也失败需明确报告，否则 known_hosts 已被上一步 rename 走且无法恢复
-				if rerr := os.Rename(knownHostsPath+".bak", knownHostsPath); rerr != nil && !os.IsNotExist(rerr) {
-					return fmt.Errorf("无法写入 known_hosts（回滚失败，原文件可能丢失）: %w (原始错误: %v)", rerr, err)
-				}
+				os.Remove(tmpPath)
 				return fmt.Errorf("无法写入 known_hosts: %w", err)
 			}
-			os.Remove(knownHostsPath + ".bak")
 		} else {
 			// 首次连接：直接追加新条目
 			f, err := os.OpenFile(knownHostsPath, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0600)
