@@ -105,15 +105,17 @@ jobs:
           name: "Lumin SSH Client ${{ github.ref_name }}"
           body: |
             ## 功能增强
-            - Windows 安装版添加"运行 Lumin"复选框
-            - 卡片模式分组标题加边框分隔
+            - 进程管理页面全面完善：详情面板多标签、列拖拽、排序图标、监控跳转
+            - 监控面板支持左侧分栏、切换会话即时刷新
+            - 进程页不在前台时停止轮询，避免资源浪费
 
             ## Bug 修复
-            - NSIS 安装器中文字符乱码（添加 UTF-8 BOM 解决跨语言编码问题）
-            - 解压去掉--no-unsafe-paths，兼容不支持该选项的tar版本
-            - 更新后自动重启 --nsis 参数修复
-            - macOS 闪退（托盘初始化冲突修复）
-            - Linux 托盘图标改用 PNG 格式，添加 deb 打包配置
+            - 全量代码审查修复 17 个问题
+            - 命令历史记录机制重写 + 密码保护统一
+            - 安全加固：probe 脚本提权消除、known_hosts 数据丢失修复、WS 连接泄漏修复、密码保护完善
+            - probe 写入失败 3 次后停止转圈，显示"写入失败，请重试"
+            - 文件管理器布局选择器文本居中与裁剪修复
+            - sha256sum 产物内容去掉 build/ 路径前缀
 
             ## 构建信息
             - Linux 便携版 ([Lumin-V${{ steps.version.outputs.version }}-linux-amd64](https://github.com/wmwlwmwl/Lumin-SSH/releases/download/v${{ steps.version.outputs.version }}/Lumin-V${{ steps.version.outputs.version }}-linux-amd64))：即下即用
