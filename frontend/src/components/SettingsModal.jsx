@@ -5,22 +5,24 @@ import { getModKey } from '../utils/platform.js';
 import logoImg from '../assets/logo.png';
 import { APP_VERSION } from '../config.js';
 import { useUpdateChecker } from '../hooks/useUpdateChecker.js';
-import { Sun, Monitor, Moon, Keyboard, Cloud, Info, Database, Folder, X, RefreshCw, Globe, Palette, Lock, Bot } from 'lucide-react';
+import { Sun, Monitor, Moon, Keyboard, Cloud, Info, Database, Folder, X, RefreshCw, Globe, Palette, Lock, Bot, SlidersHorizontal } from 'lucide-react';
 import { Z } from '../constants/zIndex';
 import { WindowSetSize } from '../../wailsjs/runtime/runtime.js';
 import { hexToRgb } from '../utils/theme.js';
 import AppTab from './settings/AppTab';
+import GeneralTab from './settings/GeneralTab';
 import NetworkTab from './settings/NetworkTab';
 import AppearanceTab from './settings/AppearanceTab';
 import AITab from './settings/AITab';
 import ShortcutsTab from './settings/ShortcutsTab';
 import SyncTab from './settings/SyncTab';
 
-const TAB_ICON = { network: Globe, appearance: Palette, ai: Bot, shortcuts: Keyboard, sync: Cloud, app: Info };
+const TAB_ICON = { general: SlidersHorizontal, network: Globe, appearance: Palette, ai: Bot, shortcuts: Keyboard, sync: Cloud, app: Info };
 
-const TAB_LABELS = { network: '网络', appearance: '外观', ai: 'AI 集成', shortcuts: '快捷键', sync: '同步与云', app: '关于' };
+const TAB_LABELS = { general: '通用', network: '网络', appearance: '外观', ai: 'AI 集成', shortcuts: '快捷键', sync: '同步与云', app: '关于' };
 
 const TABS = [
+  { id: 'general' },
   { id: 'network' },
   { id: 'appearance' },
   { id: 'ai' },
@@ -206,7 +208,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
     });
   };
 
-  const [activeTab, setActiveTab] = useState('network');
+  const [activeTab, setActiveTab] = useState('general');
 
   // WebDAV state
   const [webdavForm, setWebdavForm] = useState(defaultWebdavForm);
@@ -269,7 +271,7 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
   const [terminalColorTheme, setTerminalColorTheme] = useState(localStorage.getItem('terminalColorTheme') || 'lumin');
   const [terminalLocalEcho, setTerminalLocalEcho] = useState(localStorage.getItem('terminalLocalEcho') === 'true');
   const [rememberWindowSize, setRememberWindowSize] = useState(localStorage.getItem('rememberWindowSize') !== 'false');
-  const [showAIPanel, setShowAIPanel] = useState(localStorage.getItem('showAIPanel') !== 'false');
+  const [showAIPanel, setShowAIPanel] = useState(localStorage.getItem('showAIPanel') === 'true');
   const [terminalOutputLineLimit, setTerminalOutputLineLimit] = useState(500);
   const [terminalOutputCharacterLimit, setTerminalOutputCharacterLimit] = useState(35000);
 
@@ -449,6 +451,29 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
     const h = Math.min(900, Math.floor(screen.height * 0.9));
     WindowSetSize(w, h);
     addToast($t('窗口大小已恢复默认'), 'success');
+  };
+
+  // 操作确认开关
+  const [confirmCloseSession, setConfirmCloseSession] = useState(localStorage.getItem('skipCloseSessionConfirm') !== 'true');
+  const [confirmCloseAll, setConfirmCloseAll] = useState(localStorage.getItem('skipCloseAllConfirm') !== 'true');
+  const [windowCloseAction, setWindowCloseAction] = useState(localStorage.getItem('windowCloseAction') || 'ask');
+
+  const handleToggleConfirmCloseSession = () => {
+    const next = !confirmCloseSession;
+    setConfirmCloseSession(next);
+    if (next) localStorage.removeItem('skipCloseSessionConfirm');
+    else localStorage.setItem('skipCloseSessionConfirm', 'true');
+  };
+  const handleToggleConfirmCloseAll = () => {
+    const next = !confirmCloseAll;
+    setConfirmCloseAll(next);
+    if (next) localStorage.removeItem('skipCloseAllConfirm');
+    else localStorage.setItem('skipCloseAllConfirm', 'true');
+  };
+  const handleWindowCloseActionChange = (value) => {
+    setWindowCloseAction(value);
+    if (value === 'ask') localStorage.removeItem('windowCloseAction');
+    else localStorage.setItem('windowCloseAction', value);
   };
 
   const handleToggleShowAIPanel = () => {
@@ -754,6 +779,19 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
               />
             )}
 
+            {activeTab === 'general' && (
+              <GeneralTab
+                language={language}
+                onLanguageChange={handleLanguageChange}
+                confirmCloseSession={confirmCloseSession}
+                onToggleConfirmCloseSession={handleToggleConfirmCloseSession}
+                confirmCloseAll={confirmCloseAll}
+                onToggleConfirmCloseAll={handleToggleConfirmCloseAll}
+                windowCloseAction={windowCloseAction}
+                onWindowCloseActionChange={handleWindowCloseActionChange}
+              />
+            )}
+
             {activeTab === 'network' && (
               <NetworkTab
                 pingProtocol={pingProtocol}
@@ -766,8 +804,6 @@ export default function SettingsModal({ onClose, addToast, onRestored }) {
             )}
             {activeTab === 'appearance' && (
               <AppearanceTab
-                language={language}
-                onLanguageChange={handleLanguageChange}
                 terminalFontSize={terminalFontSize}
                 onTerminalFontSizeChange={handleTerminalFontChange}
                 terminalLocalEcho={terminalLocalEcho}

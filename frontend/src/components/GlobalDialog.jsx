@@ -23,7 +23,7 @@ export default function GlobalDialog() {
           });
         });
       },
-      confirm: (message, title = t('操作确认')) => {
+      confirm: (message, title = t('操作确认'), checkboxLabel = '') => {
         return new Promise((resolve) => {
           setDialogs(prev => {
             // 防止重复弹窗
@@ -33,8 +33,9 @@ export default function GlobalDialog() {
               type: 'confirm',
               title,
               message,
-              onConfirm: () => resolve(true),
-              onCancel: () => resolve(false)
+              checkboxLabel,
+              onConfirm: (_, checked) => resolve(checkboxLabel ? { confirmed: true, checked } : true),
+              onCancel: () => resolve(checkboxLabel ? { confirmed: false, checked: false } : false)
             }];
           });
         });
@@ -56,7 +57,7 @@ export default function GlobalDialog() {
           });
         });
       },
-      choice: (message, title, buttons) => {
+      choice: (message, title, buttons, checkboxLabel = '') => {
         return new Promise((resolve) => {
           setDialogs(prev => {
             // 防止重复弹窗
@@ -67,7 +68,8 @@ export default function GlobalDialog() {
               title,
               message,
               buttons,
-              onChoice: (val) => resolve(val),
+              checkboxLabel,
+              onChoice: (val, checked) => resolve(checkboxLabel ? { value: val, checked } : val),
               onClose: () => resolve(null)
             }];
           });
@@ -94,8 +96,8 @@ export default function GlobalDialog() {
     setDialogs(prev => prev.slice(1));
   };
 
-  const handleChoice = (val) => {
-    if (current.onChoice) current.onChoice(val);
+  const handleChoice = (val, checked) => {
+    if (current.onChoice) current.onChoice(val, checked);
     setDialogs(prev => prev.slice(1));
   };
 
@@ -183,35 +185,52 @@ function DialogContent({ current, onClose, onConfirm, onChoice }) {
       )}
 
       {current.type === 'choice' ? (
+        <>
         <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
           {current.buttons.map((btn, i) => (
             <button
               key={i}
               className={btn.primary ? 'btn btn-primary' : btn.secondary ? 'btn btn-secondary' : 'btn btn-secondary'}
-              onClick={() => onChoice(btn.value)}
+              onClick={() => onChoice(btn.value, checked)}
               style={{ flex: 1, padding: '10px 0', justifyContent: 'center', whiteSpace: 'nowrap' }}
             >
               {btn.label}
             </button>
           ))}
         </div>
+        {current.checkboxLabel && (
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16, fontSize: 13, color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+            <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} />
+            {current.checkboxLabel}
+          </label>
+        )}
+        </>
       ) : (
+      <>
+      {current.type === 'confirm' && current.checkboxLabel && (
+        <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 20, fontSize: 13, color: 'var(--text-tertiary)', cursor: 'pointer' }}>
+          <input type="checkbox" checked={checked} onChange={e => setChecked(e.target.checked)} />
+          {current.checkboxLabel}
+        </label>
+      )}
       <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
         {current.type !== 'alert' && (
           <button className="btn btn-secondary" onClick={onClose} style={{ flex: 1, padding: '10px 0', justifyContent: 'center' }}>{t('取消')}</button>
         )}
-        <button 
+        <button
           className="btn btn-primary"
           onClick={() => {
             if (current.type === 'prompt') onConfirm(inputValue, checked);
-            else if (current.type === 'confirm') onConfirm(true);
+            else if (current.type === 'confirm') onConfirm(true, checked);
             else onClose();
           }}
           style={current.type === 'alert' ? { minWidth: 120, justifyContent: 'center' } : { flex: 1, padding: '10px 0', justifyContent: 'center' }}
         >
           {current.type === 'alert' ? t('我知道了') : t('确定')}
         </button>
-      </div>)}
+      </div>
+      </>
+      )}
     </div>
   );
 }

@@ -321,7 +321,7 @@ export default function ProcessPage({ sessionId, addToast, active }) {
       </div>
 
       {/* 表格区域 */}
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+      <div ref={scrollRef} onScroll={handleScroll} style={{ flex: 1, minHeight: 0, overflow: 'auto' }}>
         {loading && !processes ? (
           <div className="empty-state" style={{ marginTop: '10vh' }}>
             <div style={{ fontSize: 32, opacity: 0.3 }}>⟳</div>
@@ -342,7 +342,7 @@ export default function ProcessPage({ sessionId, addToast, active }) {
             </p>
           </div>
         ) : (
-          <div style={{ border: '1px solid var(--border)', borderRadius: 8, overflowX: 'auto' }}>
+          <div style={{ border: '1px solid var(--border)', borderRadius: 8 }}>
             {/* 表头 */}
             <div style={{
               display: 'grid',

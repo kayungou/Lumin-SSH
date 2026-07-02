@@ -95,7 +95,7 @@ export default function App() {
   const [aiPanelWidth, setAiPanelWidth] = useState(() => {
     return clampPanelWidth(localStorage.getItem('aiPanelWidth') || '320');
   });
-  const [showAIPanel, setShowAIPanel] = useState(localStorage.getItem('showAIPanel') !== 'false');
+  const [showAIPanel, setShowAIPanel] = useState(localStorage.getItem('showAIPanel') === 'true');
 
   const leftSplitWidthRef = useRef(leftSplitWidth);
   const bottomSplitHeightRef = useRef(bottomSplitHeight);
@@ -236,7 +236,7 @@ export default function App() {
         setShowAIPanel(e.detail);
         return;
       }
-      setShowAIPanel(localStorage.getItem('showAIPanel') !== 'false');
+      setShowAIPanel(localStorage.getItem('showAIPanel') === 'true');
     };
     window.addEventListener('ai-panel-visibility-changed', handler);
     return () => window.removeEventListener('ai-panel-visibility-changed', handler);
@@ -764,21 +764,30 @@ export default function App() {
       }
       return;
     }
-    const choice = await window.luminDialog?.choice?.(
+    const savedAction = localStorage.getItem('windowCloseAction');
+    if (savedAction === 'quit') { AppGo.DoQuit(); return; }
+    if (savedAction === 'tray') { AppGo.AckClose(); WindowHide(); return; }
+    const result = await window.luminDialog?.choice?.(
       t('请选择操作'),
       t('关闭窗口'),
       [
         { label: t('退出'), value: 'quit', primary: true },
         { label: t('系统托盘'), value: 'tray', secondary: true },
         { label: t('取消'), value: 'cancel', secondary: true },
-      ]
+      ],
+      t('记住选择')
     );
-    if (choice === 'quit') {
+    if (!result) return;
+    const { value, checked } = result;
+    if (checked && (value === 'quit' || value === 'tray')) {
+      localStorage.setItem('windowCloseAction', value);
+    }
+    if (value === 'quit') {
       AppGo.DoQuit();
-    } else if (choice === 'tray') {
+    } else if (value === 'tray') {
       AppGo.AckClose();
       WindowHide();
-    } else if (choice === 'cancel') {
+    } else if (value === 'cancel') {
       AppGo.AckClose();
     }
   }, [t, syncFailed, addToast]);
@@ -911,11 +920,41 @@ export default function App() {
 
   const closeSession = useCallback(async (sessionId, e) => {
     e?.stopPropagation();
+    if (localStorage.getItem('skipCloseSessionConfirm') === 'true') {
+      forceCloseSession(sessionId);
+      return;
+    }
     const session = sessionsRef.current.find(s => s.id === sessionId);
     const name = session?.serverName || session?.name || session?.host || sessionId;
-    if (!(await window.luminDialog?.confirm(`${t('确定关闭连接')}「${name}」？`))) return;
+    const result = await window.luminDialog?.confirm(`${t('确定关闭连接')}「${name}」？`, t('操作确认'), t('不再询问'));
+    if (!result?.confirmed) return;
+    if (result.checked) localStorage.setItem('skipCloseSessionConfirm', 'true');
     forceCloseSession(sessionId);
-  }, [forceCloseSession]);
+  }, [forceCloseSession, t]);
+
+  // ponytail: 批量关闭 — 一次性断开所有终端再清空 state，避免逐个 forceClose 反复触发 switchToNextSession
+  const closeAllSessions = useCallback(async () => {
+    const all = sessionsRef.current;
+    if (all.length === 0) return;
+    const skip = localStorage.getItem('skipCloseAllConfirm') === 'true';
+    if (!skip) {
+      const result = await window.luminDialog?.confirm(`${t('确定关闭全部')} ${all.length} ${t('个连接')}？`, t('操作确认'), t('不再询问'));
+      if (!result?.confirmed) return;
+      if (result.checked) localStorage.setItem('skipCloseAllConfirm', 'true');
+    }
+    const allTermIds = all.flatMap(s => s.terminals?.length > 0 ? s.terminals.map(t => t.id) : [s.id]);
+    allTermIds.forEach(id => {
+      cancelledConnectionsRef.current.add(id);
+      setTimeout(() => { cancelledConnectionsRef.current.delete(id); }, 30000);
+    });
+    for (const id of allTermIds) {
+      AppGo.DisconnectSSH(id).catch(() => {});
+    }
+    setSessions([]);
+    setActiveSessionId(null);
+    setActiveTerminalId(null);
+    setConnectingServer(null);
+  }, [t]);
 
   // ── 在当前服务器上新建终端标签 ──────────────────────────────
   const openNewTerminal = useCallback(async (sessionId) => {
@@ -1187,6 +1226,16 @@ export default function App() {
                   <span className="tab-close no-drag" onClick={(e) => closeSession(s.id, e)}><X size={12} /></span>
                 </div>
               ))}
+              {sessions.length >= 2 && (
+                <button
+                  className="btn btn-ghost btn-sm no-drag"
+                  onClick={closeAllSessions}
+                  title={t('关闭全部')}
+                  style={{ marginLeft: 4, padding: '2px 8px', fontSize: 12, color: 'var(--text-tertiary)', flexShrink: 0 }}
+                >
+                  <X size={12} /> {t('关闭全部')}
+                </button>
+              )}
             </div>
           )}
           {sessions.length === 0 && <div style={{ flex: 1 }}></div>}
@@ -1691,6 +1740,20 @@ export default function App() {
             >
               <X size={14} /> {t('关闭连接')}
             </div>
+            {sessions.length >= 2 && (
+              <>
+                <div style={{ height: 1, background: 'var(--border)', margin: '4px 0' }} />
+                <div
+                  className="tab-context-menu-item"
+                  onClick={() => {
+                    setTabContextMenu(null);
+                    closeAllSessions();
+                  }}
+                >
+                  <X size={14} /> {t('关闭全部')}
+                </div>
+              </>
+            )}
           </div>
       )}
     </div>
